@@ -26,7 +26,7 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { isDemoMode, appUrl } from './config';
+import { isDemoMode } from './config';
 import type { Product, Order, UserProfile, ProductStatus, Review, UserType } from '@/types';
 
 const PRODUCTS_KEY = 'algshop_products_v2';
@@ -677,7 +677,7 @@ export async function uploadImages(files: File[]): Promise<string[]> {
   }
   const urls: string[] = [];
   for (const file of files) {
-    const res = await fetch(`${appUrl}/api/upload`, {
+    const res = await fetch('/api/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
