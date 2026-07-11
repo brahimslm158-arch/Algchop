@@ -188,7 +188,7 @@ export default function ProductDetailPage() {
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
-  const canReview = user && user.userType === 'buyer' && user.uid !== product.sellerId;
+  const canReview = Boolean(user && user.uid !== product.sellerId);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" dir="rtl">
@@ -463,47 +463,54 @@ export default function ProductDetailPage() {
               </form>
             )}
 
-            {canReview && !reviewSuccess && (
-              <form onSubmit={onSubmitReview} className="mt-6 pt-6 border-t border-zinc-100 space-y-3">
-                <h4 className="font-bold text-zinc-900">قيّم البائع</h4>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setReviewForm((f) => ({ ...f, rating: i + 1 }))}
-                      className="p-1"
-                    >
-                      <Star
-                        className={`w-6 h-6 transition-colors ${
-                          i < reviewForm.rating ? 'text-yellow-500 fill-current' : 'text-zinc-300'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  placeholder="تعليقك (اختياري)"
-                  rows={2}
-                  value={reviewForm.comment}
-                  onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
-                />
-                <button
-                  type="submit"
-                  disabled={reviewLoading || reviewForm.rating === 0}
-                  className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-2.5 rounded-full transition-all"
+            <div className="mt-6 pt-6 border-t border-zinc-100 space-y-3">
+              <h4 className="font-bold text-zinc-900">قيّم البائع</h4>
+              {!user ? (
+                <Link
+                  href="/auth"
+                  className="block w-full text-center bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold py-2.5 rounded-full transition-all"
                 >
-                  {reviewLoading ? 'جاري الإرسال...' : 'إرسال التقييم'}
-                </button>
-              </form>
-            )}
-
-            {reviewSuccess && (
-              <div className="mt-6 pt-6 border-t border-zinc-100 text-center text-zinc-700 font-medium">
-                شكراً! تم إرسال تقييمك.
-              </div>
-            )}
+                  سجّل الدخول للتقييم
+                </Link>
+              ) : reviewSuccess ? (
+                <p className="text-center text-zinc-700 font-medium">شكراً! تم إرسال تقييمك.</p>
+              ) : canReview ? (
+                <form onSubmit={onSubmitReview} className="space-y-3">
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setReviewForm((f) => ({ ...f, rating: i + 1 }))}
+                        className="p-1"
+                      >
+                        <Star
+                          className={`w-6 h-6 transition-colors ${
+                            i < reviewForm.rating ? 'text-yellow-500 fill-current' : 'text-zinc-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    placeholder="تعليقك (اختياري)"
+                    rows={2}
+                    value={reviewForm.comment}
+                    onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
+                    className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                  />
+                  <button
+                    type="submit"
+                    disabled={reviewLoading || reviewForm.rating === 0}
+                    className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-2.5 rounded-full transition-all"
+                  >
+                    {reviewLoading ? 'جاري الإرسال...' : 'إرسال التقييم'}
+                  </button>
+                </form>
+              ) : (
+                <p className="text-sm text-zinc-500">لا يمكنك تقييم نفسك.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

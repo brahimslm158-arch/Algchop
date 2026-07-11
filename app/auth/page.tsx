@@ -8,7 +8,7 @@ import { Mail, Lock, User, Phone, ShoppingBag, Store } from 'lucide-react';
 export default function AuthPage() {
   const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [form, setForm] = useState({
     displayName: '',
     email: '',
@@ -31,7 +31,7 @@ export default function AuthPage() {
     setError('');
     setSubmitting(true);
     try {
-      if (isSignUp) {
+      if (mode === 'signup') {
         if (form.password !== form.confirmPassword) {
           throw new Error('كلمتا المرور غير متطابقتين');
         }
@@ -53,7 +53,7 @@ export default function AuthPage() {
     setError('');
     setSubmitting(true);
     try {
-      await signInWithGoogle(form.userType, form.phone);
+      await signInWithGoogle(mode === 'signup' ? form.userType : undefined, form.phone);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ');
     } finally {
@@ -72,15 +72,15 @@ export default function AuthPage() {
   return (
     <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12" dir="rtl">
       <div className="glass rounded-3xl shadow-2xl p-8 md:p-10">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-zinc-900 rounded-2xl mb-4 shadow-lg shadow-zinc-900/20">
             <ShoppingBag className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-zinc-900">
-            {isSignUp ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+            {mode === 'signup' ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
           </h1>
           <p className="text-zinc-500 mt-2">
-            {isSignUp ? 'ابدأ البيع والشراء على Algshop' : 'أهلاً بعودتك إلى Algshop'}
+            {mode === 'signup' ? 'ابدأ البيع والشراء على Algshop' : 'أهلاً بعودتك إلى Algshop'}
           </p>
         </div>
 
@@ -88,35 +88,65 @@ export default function AuthPage() {
           <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-sm mb-4">{error}</div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-100 rounded-2xl mb-6">
           <button
             type="button"
-            onClick={() => setForm((f) => ({ ...f, userType: 'buyer' }))}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-medium transition-all border ${
-              form.userType === 'buyer'
-                ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg shadow-zinc-900/10'
-                : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+            onClick={() => setMode('signin')}
+            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${
+              mode === 'signin'
+                ? 'bg-white text-zinc-900 shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-700'
             }`}
           >
-            <ShoppingBag className="w-5 h-5" />
-            مشتري
+            تسجيل الدخول
           </button>
           <button
             type="button"
-            onClick={() => setForm((f) => ({ ...f, userType: 'seller' }))}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-medium transition-all border ${
-              form.userType === 'seller'
-                ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg shadow-zinc-900/10'
-                : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+            onClick={() => setMode('signup')}
+            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${
+              mode === 'signup'
+                ? 'bg-white text-zinc-900 shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-700'
             }`}
           >
-            <Store className="w-5 h-5" />
-            بائع
+            حساب جديد
           </button>
         </div>
 
+        {mode === 'signup' && (
+          <div className="mb-5">
+            <label className="block text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wide">نوع الحساب</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, userType: 'buyer' }))}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-bold transition-all border ${
+                  form.userType === 'buyer'
+                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg shadow-zinc-900/10'
+                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+                }`}
+              >
+                <ShoppingBag className="w-5 h-5" />
+                مشتري
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, userType: 'seller' }))}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-bold transition-all border ${
+                  form.userType === 'seller'
+                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg shadow-zinc-900/10'
+                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+                }`}
+              >
+                <Store className="w-5 h-5" />
+                بائع
+              </button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
+          {mode === 'signup' && (
             <>
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-1.5">الاسم الكامل</label>
@@ -177,7 +207,7 @@ export default function AuthPage() {
               />
             </div>
           </div>
-          {isSignUp && (
+          {mode === 'signup' && (
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-1.5">تأكيد كلمة المرور</label>
               <div className="relative">
@@ -199,7 +229,7 @@ export default function AuthPage() {
             disabled={submitting}
             className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-3.5 rounded-full transition-all shadow-lg shadow-zinc-900/10"
           >
-            {submitting ? 'جاري التحميل...' : isSignUp ? 'إنشاء الحساب' : 'تسجيل الدخول'}
+            {submitting ? 'جاري التحميل...' : mode === 'signup' ? 'إنشاء الحساب' : 'تسجيل الدخول'}
           </button>
         </form>
 
@@ -215,7 +245,7 @@ export default function AuthPage() {
         <button
           onClick={handleGoogle}
           disabled={submitting}
-          className="w-full border border-zinc-200 hover:bg-zinc-50 text-zinc-900 font-medium py-3 rounded-full transition-all flex items-center justify-center gap-2"
+          className="w-full border border-zinc-200 hover:bg-zinc-50 text-zinc-900 font-bold py-3 rounded-full transition-all flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -235,19 +265,8 @@ export default function AuthPage() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          Google
+          {mode === 'signup' ? 'إنشاء الحساب بـ Google' : 'الدخول بـ Google'}
         </button>
-
-        <p className="text-center text-sm text-zinc-500 mt-6">
-          {isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟'}{' '}
-          <button
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-zinc-900 font-semibold hover:underline"
-          >
-            {isSignUp ? 'سجّل الدخول' : 'أنشئ حساباً'}
-          </button>
-        </p>
       </div>
     </div>
   );

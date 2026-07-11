@@ -1,23 +1,28 @@
 import { NextRequest } from 'next/server';
-import { getPresignedUploadUrl } from '@/lib/storage';
+import { uploadFileBuffer } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { filename, contentType, size } = body;
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
 
-    if (!filename || !contentType || typeof size !== 'number') {
-      return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400 });
+    if (!file) {
+      return new Response(JSON.stringify({ error: 'Missing file' }), { status: 400 });
     }
 
-    const result = await getPresignedUploadUrl(filename, contentType, size);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const result = await uploadFileBuffer(file.name, file.type || 'application/octet-stream', buffer);
+
     if (!result) {
-      return new Response(JSON.stringify({ error: 'Cloudflare not configured' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'Storage not configured' }), { status: 500 });
     }
 
-    return Response.json(result);
+    return Response.json({ publicUrl: result.publicUrl, key: result.key });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: message }), { status: 500 });
   }
 }
+
+export const runtime = 'nodejs';
+export const maxDuration = 30;

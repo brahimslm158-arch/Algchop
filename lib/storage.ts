@@ -16,6 +16,18 @@ const s3Client = isCloudflareConfigured
     })
   : null;
 
+function buildKey(filename: string): string {
+  const ext = filename.split('.').pop() || 'jpg';
+  return `products/${randomUUID()}.${ext}`;
+}
+
+function buildPublicUrl(key: string): string {
+  if (cloudflareConfig.publicUrl) {
+    return `${cloudflareConfig.publicUrl.replace(/\/$/, '')}/${key}`;
+  }
+  return `${endpoint}/${cloudflareConfig.bucketName}/${key}`;
+}
+
 export async function getPresignedUploadUrl(
   filename: string,
   contentType: string,
@@ -23,8 +35,7 @@ export async function getPresignedUploadUrl(
 ): Promise<{ url: string; publicUrl: string; key: string } | null> {
   if (!s3Client) return null;
 
-  const ext = filename.split('.').pop() || 'jpg';
-  const key = `products/${randomUUID()}.${ext}`;
+  const key = buildKey(filename);
 
   const command = new PutObjectCommand({
     Bucket: cloudflareConfig.bucketName,
@@ -34,9 +45,27 @@ export async function getPresignedUploadUrl(
   });
 
   const url = await getSignedUrl(s3Client, command, { expiresIn: 300 });
-  const publicUrl = cloudflareConfig.publicUrl
-    ? `${cloudflareConfig.publicUrl.replace(/\/$/, '')}/${key}`
-    : `${endpoint}/${cloudflareConfig.bucketName}/${key}`;
+  return { url, publicUrl: buildPublicUrl(key), key };
+}
 
-  return { url, publicUrl, key };
+export async function uploadFileBuffer(
+  filename: string,
+  contentType: string,
+  buffer: Buffer
+): Promise<{ publicUrl: string; key: string } | null> {
+  if (!s3Client) return null;
+
+  const key = buildKey(filename);
+
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: cloudflareConfig.bucketName,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ContentLength: buffer.length,
+    })
+  );
+
+  return { publicUrl: buildPublicUrl(key), key };
 }

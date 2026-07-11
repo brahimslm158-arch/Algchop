@@ -677,19 +677,17 @@ export async function uploadImages(files: File[]): Promise<string[]> {
   }
   const urls: string[] = [];
   for (const file of files) {
+    const data = new FormData();
+    data.append('file', file);
     const res = await fetch('/api/upload', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filename: file.name,
-        contentType: file.type,
-        size: file.size,
-      }),
+      body: data,
     });
-    if (!res.ok) throw new Error('فشل في الحصول على رابط الرفع');
-    const { url, publicUrl } = (await res.json()) as { url: string; publicUrl: string };
-    const upload = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-    if (!upload.ok) throw new Error('فشل رفع الصورة');
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(body || 'فشل في الحصول على رابط الرفع');
+    }
+    const { publicUrl } = (await res.json()) as { publicUrl: string };
     urls.push(publicUrl);
   }
   return urls;
