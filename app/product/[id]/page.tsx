@@ -94,7 +94,7 @@ export default function ProductDetailPage() {
             notes: '',
           });
           getProducts({ category: p.category, sellerId: p.sellerId })
-            .then((list) => setRelated(list.filter((x) => x.id !== p.id).slice(0, 4)))
+            .then((list) => setRelated((list || []).filter((x) => x.id !== p.id).slice(0, 4)))
             .catch(() => setRelated([]));
           getSellerRating(p.sellerId).then(setRating);
           getSellerReviews(p.sellerId).then(setReviews);
@@ -175,8 +175,8 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center" dir="rtl">
-        <h1 className="text-xl font-bold text-zinc-900 mb-2">المنتج غير موجود</h1>
-        <Link href="/search" className="text-zinc-700 hover:underline">
+        <h1 className="text-xl font-black text-zinc-900 mb-2">المنتج غير موجود</h1>
+        <Link href="/search" className="text-zinc-600 hover:text-zinc-900 font-bold">
           العودة إلى المنتجات
         </Link>
       </div>
@@ -192,9 +192,9 @@ export default function ProductDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" dir="rtl">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-zinc-200 p-4">
             <div className="relative aspect-square md:aspect-[16/10] bg-zinc-100 rounded-2xl overflow-hidden">
               <Image
                 src={product.images[selectedImage] || '/images/placeholder.svg'}
@@ -217,8 +217,8 @@ export default function ProductDetailPage() {
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
-                    className={`relative w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 transition-all ${
-                      selectedImage === i ? 'border-zinc-900 shadow-md' : 'border-zinc-200'
+                    className={`relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-colors ${
+                      selectedImage === i ? 'border-zinc-900' : 'border-zinc-200'
                     }`}
                   >
                     <Image src={img} alt="" fill sizes="80px" className="object-cover" unoptimized />
@@ -228,38 +228,38 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm p-6 mt-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="bg-zinc-100 text-zinc-700 text-sm font-medium px-3 py-1 rounded-full">
+          <div className="bg-white rounded-2xl border border-zinc-200 p-6 mt-6">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span className="bg-zinc-100 text-zinc-700 text-sm font-bold px-3 py-1 rounded-full">
                 {product.category}
               </span>
               <span
-                className={`text-sm font-medium px-3 py-1 rounded-full ${
+                className={`text-sm font-bold px-3 py-1 rounded-full ${
                   conditionClasses[product.condition] || 'bg-zinc-100 text-zinc-700'
                 }`}
               >
                 {conditionLabels[product.condition] || product.condition}
               </span>
-              <span className="text-zinc-400 text-sm flex items-center gap-1 mr-auto">
+              <span className="text-zinc-500 text-sm font-bold flex items-center gap-1 mr-auto">
                 <Eye className="w-4 h-4" />
                 {product.views}
               </span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 mb-4">
+            <h1 className="text-2xl md:text-3xl font-black text-zinc-900 mb-4">
               {product.title}
             </h1>
             <div className="flex items-end gap-3 mb-6">
-              <span className="text-3xl font-bold text-zinc-900">
+              <span className="text-3xl font-black text-zinc-900">
                 {product.price.toLocaleString('ar-DZ')} د.ج
               </span>
               {product.originalPrice && product.originalPrice > product.price && (
-                <span className="text-xl text-zinc-400 line-through">
+                <span className="text-xl text-zinc-400 line-through font-bold">
                   {product.originalPrice.toLocaleString('ar-DZ')} د.ج
                 </span>
               )}
             </div>
 
-            <div className="prose prose-zinc max-w-none text-zinc-700 leading-relaxed whitespace-pre-wrap">
+            <div className="text-zinc-700 leading-relaxed whitespace-pre-wrap text-base font-bold">
               {product.description}
             </div>
 
@@ -269,7 +269,7 @@ export default function ProductDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {product.options.map((opt) => (
                     <div key={opt.name}>
-                      <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                      <label className="block text-sm font-bold text-zinc-700 mb-1.5">
                         {opt.name}
                       </label>
                       <select
@@ -277,7 +277,7 @@ export default function ProductDetailPage() {
                         onChange={(e) =>
                           setSelectedOptions((prev) => ({ ...prev, [opt.name]: e.target.value }))
                         }
-                        className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                        className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-zinc-400 transition-colors"
                       >
                         <option value="">اختر {opt.name}</option>
                         {opt.values.map((v) => (
@@ -295,25 +295,25 @@ export default function ProductDetailPage() {
 
           {reviews.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-xl font-bold text-zinc-900 mb-4">تقييمات البائع</h3>
+              <h3 className="text-xl font-black text-zinc-900 mb-4">تقييمات البائع</h3>
               <div className="space-y-4">
                 {reviews.slice(0, 3).map((review) => (
-                  <div key={review.id} className="bg-white rounded-2xl border border-zinc-100 p-5">
+                  <div key={review.id} className="bg-white rounded-2xl border border-zinc-200 p-5">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-700">
                           <User className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="font-semibold text-zinc-900 text-sm">{review.buyerName}</p>
-                          <p className="text-xs text-zinc-400">
+                          <p className="font-bold text-zinc-900 text-sm">{review.buyerName}</p>
+                          <p className="text-xs text-zinc-500 font-bold">
                             {new Date(review.createdAt).toLocaleDateString('ar-DZ')}
                           </p>
                         </div>
                       </div>
                       <StarRating rating={review.rating} />
                     </div>
-                    {review.comment && <p className="text-zinc-700 text-sm leading-relaxed">{review.comment}</p>}
+                    {review.comment && <p className="text-zinc-700 text-sm leading-relaxed font-bold">{review.comment}</p>}
                   </div>
                 ))}
               </div>
@@ -322,13 +322,13 @@ export default function ProductDetailPage() {
 
           {related.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-xl font-bold text-zinc-900 mb-4">منتجات ذات صلة</h3>
+              <h3 className="text-xl font-black text-zinc-900 mb-4">منتجات ذات صلة</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {related.map((p) => (
                   <Link
                     key={p.id}
                     href={`/product/${p.id}`}
-                    className="bg-white rounded-2xl border border-zinc-100 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+                    className="bg-white rounded-2xl border border-zinc-200 overflow-hidden hover:border-zinc-900 transition-colors"
                   >
                     <div className="relative aspect-[4/3] bg-zinc-100">
                       <Image
@@ -341,7 +341,7 @@ export default function ProductDetailPage() {
                       />
                     </div>
                     <div className="p-3">
-                      <h4 className="font-semibold text-zinc-900 line-clamp-2">{p.title}</h4>
+                      <h4 className="font-bold text-zinc-900 line-clamp-2">{p.title}</h4>
                       <p className="text-zinc-900 font-bold mt-1">
                         {p.price.toLocaleString('ar-DZ')} د.ج
                       </p>
@@ -354,21 +354,21 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm p-6 lg:sticky lg:top-24">
+          <div className="bg-white rounded-2xl border border-zinc-200 p-6 lg:sticky lg:top-24">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-14 h-14 bg-zinc-100 rounded-full flex items-center justify-center">
                 <Store className="w-7 h-7 text-zinc-700" />
               </div>
               <div>
                 <h3 className="font-bold text-zinc-900">{product.sellerName}</h3>
-                <div className="flex items-center gap-2 text-sm text-zinc-500">
+                <div className="flex items-center gap-2 text-sm font-bold text-zinc-500">
                   <StarRating rating={rating.rating} />
                   <span>({rating.count} تقييم)</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 text-sm text-zinc-700 mb-6">
+            <div className="space-y-3 text-sm font-bold text-zinc-700 mb-6">
               {product.sellerPhone && (
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-zinc-900" />
@@ -406,7 +406,7 @@ export default function ProductDetailPage() {
             </div>
 
             {orderSuccess ? (
-              <div className="bg-zinc-100 text-zinc-900 p-5 rounded-2xl flex items-start gap-2">
+              <div className="bg-zinc-100 text-zinc-900 p-5 rounded-2xl flex items-start gap-2 font-bold">
                 <CheckCircle className="w-5 h-5 flex-shrink-0" />
                 <p>تم إرسال طلبك بنجاح. سيتواصل البائع معك قريباً.</p>
               </div>
@@ -419,7 +419,7 @@ export default function ProductDetailPage() {
                   placeholder="الاسم الكامل"
                   value={form.buyerName}
                   onChange={(e) => setForm((f) => ({ ...f, buyerName: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
                 />
                 <input
                   type="tel"
@@ -427,37 +427,37 @@ export default function ProductDetailPage() {
                   placeholder="رقم الهاتف"
                   value={form.buyerPhone}
                   onChange={(e) => setForm((f) => ({ ...f, buyerPhone: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
                 />
                 <input
                   type="email"
                   placeholder="البريد الإلكتروني (اختياري)"
                   value={form.buyerEmail}
                   onChange={(e) => setForm((f) => ({ ...f, buyerEmail: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
                 />
                 <input
                   type="text"
                   placeholder="العنوان (اختياري)"
                   value={form.buyerAddress}
                   onChange={(e) => setForm((f) => ({ ...f, buyerAddress: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
                 />
                 <textarea
                   placeholder="ملاحظات (اختياري)"
                   rows={2}
                   value={form.notes}
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={orderLoading}
-                  className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-3 rounded-full transition-all shadow-lg shadow-zinc-900/10"
+                  className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-3 rounded-full transition-colors"
                 >
                   {orderLoading ? 'جاري الإرسال...' : 'اطلب الآن'}
                 </button>
-                <p className="text-xs text-zinc-500 text-center">
+                <p className="text-xs text-zinc-500 text-center font-bold">
                   لا يتم خصم أي مبلغ. البائع سيتواصل معك لتأكيد الطلب.
                 </p>
               </form>
@@ -468,12 +468,12 @@ export default function ProductDetailPage() {
               {!user ? (
                 <Link
                   href="/auth"
-                  className="block w-full text-center bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold py-2.5 rounded-full transition-all"
+                  className="block w-full text-center bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold py-2.5 rounded-full transition-colors"
                 >
                   سجّل الدخول للتقييم
                 </Link>
               ) : reviewSuccess ? (
-                <p className="text-center text-zinc-700 font-medium">شكراً! تم إرسال تقييمك.</p>
+                <p className="text-center text-zinc-700 font-bold">شكراً! تم إرسال تقييمك.</p>
               ) : canReview ? (
                 <form onSubmit={onSubmitReview} className="space-y-3">
                   <div className="flex items-center gap-1">
@@ -497,18 +497,18 @@ export default function ProductDetailPage() {
                     rows={2}
                     value={reviewForm.comment}
                     onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
-                    className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                    className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={reviewLoading || reviewForm.rating === 0}
-                    className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-2.5 rounded-full transition-all"
+                    className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-2.5 rounded-full transition-colors"
                   >
                     {reviewLoading ? 'جاري الإرسال...' : 'إرسال التقييم'}
                   </button>
                 </form>
               ) : (
-                <p className="text-sm text-zinc-500">لا يمكنك تقييم نفسك.</p>
+                <p className="text-sm text-zinc-500 font-bold">لا يمكنك تقييم نفسك.</p>
               )}
             </div>
           </div>

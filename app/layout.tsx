@@ -14,7 +14,7 @@ const notoArabic = Noto_Sans_Arabic({
 export const metadata: Metadata = {
   title: 'Algshop - اشترِ وبيع كل ما تريد',
   description:
-    'منصة Algshop للإعلان عن المنتجات للبيع والشراء مع إضافة الصور والوصف والأنواع والخيارات.',
+    'منصة alg shop للإعلان عن المنتجات للبيع والشراء مع إضافة الصور والوصف والأنواع والخيارات.',
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" className={`${notoArabic.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900 font-sans">
+      <body className="min-h-full flex flex-col bg-white text-zinc-900 font-sans">
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>

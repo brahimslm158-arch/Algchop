@@ -1,36 +1,48 @@
 import Link from 'next/link';
-import { ArrowLeft, ShoppingBag, Store } from 'lucide-react';
+import { ShieldCheck, Zap, HeadphonesIcon } from 'lucide-react';
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900" />
-      <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 relative">
-        <div className="glass-dark max-w-3xl rounded-3xl p-8 md:p-12" dir="rtl">
-          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-6 text-white">
-            اشترِ وبيع كل ما تريد في <span className="text-zinc-300">Algshop</span>
+    <section className="bg-white" dir="rtl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:pt-20 md:pb-14">
+        <div className="max-w-3xl mx-auto text-center">
+          <span className="inline-block mb-4 text-sm font-bold text-zinc-600 bg-zinc-100 border border-zinc-200 px-4 py-1.5 rounded-full">
+            منصة البيع والشراء في الجزائر
+          </span>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-zinc-900 leading-tight mb-4">
+            اشترِ وبيع كل ما تريد في <span className="text-zinc-500">alg shop</span>
           </h1>
-          <p className="text-lg md:text-xl text-zinc-200 mb-8 leading-relaxed">
-            منصة واعدة للإعلان عن منتجاتك مع إضافة الصور والوصف والأنواع والخيارات الاختيارية. تصميم احترافي يجعل البيع والشراء سهلاً.
+          <p className="text-lg text-zinc-600 mb-8 leading-relaxed">
+            منصة موحدة لإعلان منتجاتك للبيع والشراء بسهولة. أضف صور، وصف، سعر، وتواصل مباشر مع المشترين.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/search"
-              className="inline-flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-zinc-900 px-7 py-3.5 rounded-full font-bold text-lg transition-all shadow-xl shadow-white/10"
+              className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-white font-bold px-8 py-3 rounded-full transition-colors"
             >
-              <ShoppingBag className="w-5 h-5" />
               تصفح المنتجات
-              <ArrowLeft className="w-4 h-4" />
             </Link>
             <Link
               href="/sell"
-              className="inline-flex items-center justify-center gap-2 border border-white/30 hover:bg-white/10 text-white px-7 py-3.5 rounded-full font-bold text-lg transition-all"
+              className="w-full sm:w-auto bg-white hover:bg-zinc-100 text-zinc-900 font-bold px-8 py-3 rounded-full border border-zinc-300 transition-colors"
             >
-              <Store className="w-5 h-5" />
               أضف منتجك للبيع
             </Link>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
+            <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-xl">
+              <ShieldCheck className="w-4 h-4 text-zinc-900" />
+              <span>تواصل آمن</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-xl">
+              <Zap className="w-4 h-4 text-zinc-900" />
+              <span>إعلان سريع</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-xl">
+              <HeadphonesIcon className="w-4 h-4 text-zinc-900" />
+              <span>دعم مباشر</span>
+            </div>
           </div>
         </div>
       </div>

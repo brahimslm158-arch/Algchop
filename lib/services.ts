@@ -36,6 +36,10 @@ const REVIEWS_KEY = 'algshop_reviews_v1';
 
 // --- helpers ---
 
+function cleanUndefined(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+}
+
 function toIso(value: unknown): string {
   if (value instanceof Timestamp) return value.toDate().toISOString();
   if (value && typeof value === 'object' && (value as { toDate?: unknown }).toDate) {
@@ -326,7 +330,7 @@ export async function signUp(
     userType,
     createdAt: new Date().toISOString(),
   };
-  await setDoc(doc(db, 'users', cred.user.uid), profile, { merge: true });
+  await setDoc(doc(db, 'users', cred.user.uid), cleanUndefined(profile as unknown as Record<string, unknown>), { merge: true });
   return profile;
 }
 
@@ -374,7 +378,7 @@ export async function signInWithGoogle(
     userType: userType || 'buyer',
     createdAt: new Date().toISOString(),
   };
-  await setDoc(doc(db, 'users', cred.user.uid), profile, { merge: true });
+  await setDoc(doc(db, 'users', cred.user.uid), cleanUndefined(profile as unknown as Record<string, unknown>), { merge: true });
   return profile;
 }
 
@@ -397,7 +401,7 @@ export async function updateUserProfile(data: Partial<UserProfile>) {
   }
   const current = await getCurrentUser();
   if (!current || !db) throw new Error('غير مسجل الدخول');
-  await updateDoc(doc(db, 'users', current.uid), { ...data, updatedAt: serverTimestamp() });
+  await updateDoc(doc(db, 'users', current.uid), cleanUndefined({ ...data, updatedAt: serverTimestamp() } as Record<string, unknown>));
   return { ...current, ...data };
 }
 
@@ -452,10 +456,10 @@ export async function addSellerReview(sellerId: string, buyerId: string, buyerNa
     return review;
   }
   if (!db) throw new Error('Firebase not configured');
-  const docRef = await addDoc(collection(db, 'reviews'), {
+  const docRef = await addDoc(collection(db, 'reviews'), cleanUndefined({
     ...review,
     createdAt: serverTimestamp(),
-  });
+  } as Record<string, unknown>));
   return { ...review, id: docRef.id };
 }
 
@@ -557,7 +561,7 @@ export async function createProduct(input: Omit<Product, 'id' | 'createdAt' | 'u
     return product;
   }
   if (!db) throw new Error('Firebase not configured');
-  const docRef = await addDoc(collection(db, 'products'), payload as Record<string, unknown>);
+  const docRef = await addDoc(collection(db, 'products'), cleanUndefined(payload as Record<string, unknown>));
   return { ...payload, id: docRef.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 
@@ -574,7 +578,7 @@ export async function updateProduct(
     return products[idx];
   }
   if (!db) throw new Error('Firebase not configured');
-  await updateDoc(doc(db, 'products', id), { ...input, updatedAt: serverTimestamp() });
+  await updateDoc(doc(db, 'products', id), cleanUndefined({ ...input, updatedAt: serverTimestamp() } as Record<string, unknown>));
   const updated = await getProduct(id);
   if (!updated) throw new Error('المنتج غير موجود');
   return updated;
@@ -614,11 +618,11 @@ export async function createOrder(input: Omit<Order, 'id' | 'createdAt' | 'updat
     return created;
   }
   if (!db) throw new Error('Firebase not configured');
-  const docRef = await addDoc(collection(db, 'orders'), {
+  const docRef = await addDoc(collection(db, 'orders'), cleanUndefined({
     ...order,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  } as Record<string, unknown>));
   return { ...order, id: docRef.id };
 }
 

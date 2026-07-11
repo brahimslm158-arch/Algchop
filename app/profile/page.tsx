@@ -73,56 +73,61 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center" dir="rtl">
-        <h1 className="text-2xl font-bold text-zinc-900 mb-4">يجب تسجيل الدخول</h1>
-        <p className="text-zinc-500 mb-6">سجّل الدخول أو أنشئ حساباً جديداً لعرض ملفك الشخصي.</p>
-        <a
-          href="/auth"
-          className="inline-block bg-zinc-900 hover:bg-zinc-800 text-white font-bold px-8 py-3 rounded-full transition-all shadow-lg shadow-zinc-900/10"
-        >
-          تسجيل الدخول / حساب جديد
-        </a>
+      <div className="max-w-md mx-auto px-4 py-16 text-center" dir="rtl">
+        <div className="bg-white rounded-2xl border border-zinc-200 p-8">
+          <div className="w-14 h-14 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-7 h-7 text-zinc-700" />
+          </div>
+          <h1 className="text-xl font-black text-zinc-900 mb-2">يجب تسجيل الدخول</h1>
+          <p className="text-zinc-600 mb-6 text-sm font-bold">سجّل الدخول أو أنشئ حساباً جديداً لعرض ملفك الشخصي.</p>
+          <a
+            href="/auth"
+            className="inline-block w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold px-8 py-3 rounded-full transition-colors"
+          >
+            تسجيل الدخول / حساب جديد
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" dir="rtl">
-      <div className="glass rounded-3xl p-6 md:p-8 mb-6">
+      <div className="bg-white rounded-2xl border border-zinc-200 p-6 md:p-8 mb-6">
         <div className="flex flex-col md:flex-row items-center gap-6">
-          <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-white shrink-0">
-            {isSeller ? <Store className="w-10 h-10" /> : <ShoppingBag className="w-10 h-10" />}
+          <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center text-white shrink-0">
+            {isSeller ? <Store className="w-8 h-8" /> : <ShoppingBag className="w-8 h-8" />}
           </div>
           <div className="flex-1 text-center md:text-right">
             <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-zinc-900">{user.displayName || 'مستخدم'}</h1>
+              <h1 className="text-2xl font-black text-zinc-900">{user.displayName || 'مستخدم'}</h1>
               <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
                 {isSeller ? 'بائع' : 'مشتري'}
               </span>
             </div>
-            <p className="text-zinc-500">{user.email}</p>
-            {user.phone && <p className="text-zinc-500 text-sm">{user.phone}</p>}
+            <p className="text-zinc-600 font-bold text-sm">{user.email}</p>
+            {user.phone && <p className="text-zinc-600 font-bold text-sm">{user.phone}</p>}
             {isSeller && (
               <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-zinc-700">
                 <div className="flex items-center text-yellow-500">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="font-bold mx-1">{rating.rating || 0}</span>
                 </div>
-                <span className="text-sm text-zinc-500">({rating.count} تقييم)</span>
+                <span className="text-sm font-bold text-zinc-500">({rating.count} تقييم)</span>
               </div>
             )}
           </div>
           <div className="flex gap-3">
             <Link
               href="/sell"
-              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-full font-medium transition-all shadow-lg shadow-zinc-900/10"
+              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-full font-bold transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
               أضف منتج
             </Link>
             <button
               onClick={signOut}
-              className="flex items-center gap-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 px-5 py-2.5 rounded-full font-medium transition-all"
+              className="flex items-center gap-2 border border-zinc-200 hover:bg-zinc-100 text-zinc-700 px-5 py-2.5 rounded-full font-bold transition-colors"
             >
               <LogOut className="w-4 h-4" />
               خروج
@@ -131,16 +136,16 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-colors ${
                 activeTab === tab.key
-                  ? 'bg-zinc-900 text-white shadow-lg shadow-zinc-900/10'
+                  ? 'bg-zinc-900 text-white'
                   : 'bg-white hover:bg-zinc-100 border border-zinc-200 text-zinc-700'
               }`}
             >
@@ -184,11 +189,11 @@ function StarRating({ rating }: { rating: number }) {
 function ProductsList({ products }: { products: Product[] }) {
   if (!products.length) {
     return (
-      <div className="text-center py-16 glass rounded-3xl">
-        <p className="text-zinc-500 mb-4">لم تنشر أي منتجات بعد.</p>
+      <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200">
+        <p className="text-zinc-600 font-bold mb-4">لم تنشر أي منتجات بعد.</p>
         <Link
           href="/sell"
-          className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-6 py-2.5 rounded-full font-medium transition-all"
+          className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-6 py-2.5 rounded-full font-bold transition-colors"
         >
           أضف أول منتج للبيع
           <ArrowLeft className="w-4 h-4" />
@@ -197,20 +202,20 @@ function ProductsList({ products }: { products: Product[] }) {
     );
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {products.map((p) => (
         <Link
           key={p.id}
           href={`/product/${p.id}`}
-          className="flex gap-4 bg-white rounded-2xl border border-zinc-100 p-4 hover:shadow-lg transition-all duration-300"
+          className="flex gap-4 bg-white rounded-2xl border border-zinc-200 p-4 hover:border-zinc-900 transition-colors"
         >
           <div className="w-24 h-24 bg-zinc-100 rounded-2xl shrink-0 overflow-hidden relative">
             <Image src={p.images[0] || '/images/placeholder.svg'} alt={p.title} fill sizes="96px" className="object-cover" unoptimized />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-zinc-900 line-clamp-2 mb-1">{p.title}</h3>
-            <p className="text-zinc-900 font-bold">{p.price.toLocaleString('ar-DZ')} د.ج</p>
-            <p className="text-xs text-zinc-400 mt-2">
+            <h3 className="font-bold text-zinc-900 line-clamp-2 mb-1">{p.title}</h3>
+            <p className="text-zinc-900 font-black">{p.price.toLocaleString('ar-DZ')} د.ج</p>
+            <p className="text-xs text-zinc-500 font-bold mt-2">
               {new Date(p.createdAt).toLocaleDateString('ar-DZ')}
             </p>
           </div>
@@ -223,8 +228,8 @@ function ProductsList({ products }: { products: Product[] }) {
 function SalesList({ sales }: { sales: Order[] }) {
   if (!sales.length) {
     return (
-      <div className="text-center py-16 glass rounded-3xl">
-        <p className="text-zinc-500">لا توجد مبيعات بعد.</p>
+      <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200">
+        <p className="text-zinc-600 font-bold">لا توجد مبيعات بعد.</p>
       </div>
     );
   }
@@ -240,35 +245,35 @@ function SalesList({ sales }: { sales: Order[] }) {
 function ReviewsList({ reviews, rating }: { reviews: Review[]; rating: { rating: number; count: number } }) {
   return (
     <div className="space-y-4">
-      <div className="glass rounded-3xl p-5 flex items-center gap-4">
-        <div className="text-4xl font-extrabold text-zinc-900">{rating.rating || 0}</div>
+      <div className="bg-white rounded-2xl border border-zinc-200 p-5 flex items-center gap-4">
+        <div className="text-4xl font-black text-zinc-900">{rating.rating || 0}</div>
         <div>
           <StarRating rating={rating.rating} />
-          <p className="text-sm text-zinc-500 mt-1">{rating.count} تقييم</p>
+          <p className="text-sm text-zinc-500 font-bold mt-1">{rating.count} تقييم</p>
         </div>
       </div>
       {!reviews.length ? (
-        <div className="text-center py-12 glass rounded-3xl">
-          <p className="text-zinc-500">لا توجد تقييمات بعد.</p>
+        <div className="text-center py-12 bg-white rounded-2xl border border-zinc-200">
+          <p className="text-zinc-600 font-bold">لا توجد تقييمات بعد.</p>
         </div>
       ) : (
         reviews.map((review) => (
-          <div key={review.id} className="bg-white rounded-2xl border border-zinc-100 p-5 hover:shadow-lg transition-all duration-300">
+          <div key={review.id} className="bg-white rounded-2xl border border-zinc-200 p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-700">
                   <User className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-zinc-900 text-sm">{review.buyerName}</p>
-                  <p className="text-xs text-zinc-400">
+                  <p className="font-bold text-zinc-900 text-sm">{review.buyerName}</p>
+                  <p className="text-xs text-zinc-500 font-bold">
                     {new Date(review.createdAt).toLocaleDateString('ar-DZ')}
                   </p>
                 </div>
               </div>
               <StarRating rating={review.rating} />
             </div>
-            {review.comment && <p className="text-zinc-700 text-sm leading-relaxed">{review.comment}</p>}
+            {review.comment && <p className="text-zinc-700 text-sm leading-relaxed font-bold">{review.comment}</p>}
           </div>
         ))
       )}
@@ -279,8 +284,8 @@ function ReviewsList({ reviews, rating }: { reviews: Review[]; rating: { rating:
 function OrdersList({ orders }: { orders: Order[] }) {
   if (!orders.length) {
     return (
-      <div className="text-center py-16 glass rounded-3xl">
-        <p className="text-zinc-500">لم تُقدم أي طلبات بعد.</p>
+      <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200">
+        <p className="text-zinc-600 font-bold">لم تُقدم أي طلبات بعد.</p>
       </div>
     );
   }
@@ -300,17 +305,17 @@ function OrderItem({ order }: { order: Order }) {
   }, [order.productId]);
 
   return (
-    <div className="bg-white rounded-2xl border border-zinc-100 p-4 flex gap-4 items-center hover:shadow-lg transition-all duration-300">
+    <div className="bg-white rounded-2xl border border-zinc-200 p-4 flex gap-4 items-center">
       <div className="w-20 h-20 bg-zinc-100 rounded-2xl overflow-hidden shrink-0 relative">
         <Image src={product?.images[0] || order.productImage || '/images/placeholder.svg'} alt={order.productTitle} fill sizes="80px" className="object-cover" unoptimized />
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-zinc-900 line-clamp-1">{order.productTitle}</h3>
-        <p className="text-zinc-900 font-bold text-sm mt-1">{order.price.toLocaleString('ar-DZ')} د.ج</p>
-        <p className="text-xs text-zinc-500 mt-1">المشتري: {order.buyerName} - {order.buyerPhone}</p>
-        <p className="text-xs text-zinc-400 mt-1">{order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-DZ') : ''}</p>
+        <h3 className="font-bold text-zinc-900 line-clamp-1">{order.productTitle}</h3>
+        <p className="text-zinc-900 font-black text-sm mt-1">{order.price.toLocaleString('ar-DZ')} د.ج</p>
+        <p className="text-xs text-zinc-500 font-bold mt-1">المشتري: {order.buyerName} - {order.buyerPhone}</p>
+        <p className="text-xs text-zinc-500 font-bold mt-1">{order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-DZ') : ''}</p>
       </div>
-      <span className="text-xs font-medium px-3 py-1 bg-zinc-100 text-zinc-700 rounded-full">
+      <span className="text-xs font-bold px-3 py-1 bg-zinc-100 text-zinc-700 rounded-full border border-zinc-200">
         {order.status === 'pending' ? 'قيد الانتظار' : order.status === 'delivered' ? 'مكتمل' : 'ملغي'}
       </span>
     </div>

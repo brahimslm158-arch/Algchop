@@ -71,30 +71,30 @@ export default function AuthPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12" dir="rtl">
-      <div className="glass rounded-3xl shadow-2xl p-8 md:p-10">
+      <div className="bg-white border border-zinc-200 rounded-2xl p-6 md:p-8">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-zinc-900 rounded-2xl mb-4 shadow-lg shadow-zinc-900/20">
-            <ShoppingBag className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-zinc-900 rounded-xl mb-4">
+            <ShoppingBag className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-zinc-900">
+          <h1 className="text-2xl font-black text-zinc-900">
             {mode === 'signup' ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
           </h1>
-          <p className="text-zinc-500 mt-2">
-            {mode === 'signup' ? 'ابدأ البيع والشراء على Algshop' : 'أهلاً بعودتك إلى Algshop'}
+          <p className="text-zinc-600 text-sm font-bold mt-2">
+            {mode === 'signup' ? 'ابدأ البيع والشراء على alg shop' : 'أهلاً بعودتك إلى alg shop'}
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-sm mb-4">{error}</div>
+          <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm mb-4 font-bold">{error}</div>
         )}
 
         <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-100 rounded-2xl mb-6">
           <button
             type="button"
             onClick={() => setMode('signin')}
-            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${
+            className={`py-2.5 rounded-xl font-bold text-sm transition-colors ${
               mode === 'signin'
-                ? 'bg-white text-zinc-900 shadow-sm'
+                ? 'bg-white text-zinc-900 border border-zinc-200'
                 : 'text-zinc-500 hover:text-zinc-700'
             }`}
           >
@@ -103,9 +103,9 @@ export default function AuthPage() {
           <button
             type="button"
             onClick={() => setMode('signup')}
-            className={`py-2.5 rounded-xl font-bold text-sm transition-all ${
+            className={`py-2.5 rounded-xl font-bold text-sm transition-colors ${
               mode === 'signup'
-                ? 'bg-white text-zinc-900 shadow-sm'
+                ? 'bg-white text-zinc-900 border border-zinc-200'
                 : 'text-zinc-500 hover:text-zinc-700'
             }`}
           >
@@ -120,10 +120,10 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, userType: 'buyer' }))}
-                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-bold transition-all border ${
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition-colors border ${
                   form.userType === 'buyer'
-                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg shadow-zinc-900/10'
-                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+                    ? 'bg-zinc-900 text-white border-zinc-900'
+                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
                 }`}
               >
                 <ShoppingBag className="w-5 h-5" />
@@ -132,10 +132,10 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, userType: 'seller' }))}
-                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-bold transition-all border ${
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition-colors border ${
                   form.userType === 'seller'
-                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg shadow-zinc-900/10'
-                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
+                    ? 'bg-zinc-900 text-white border-zinc-900'
+                    : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
                 }`}
               >
                 <Store className="w-5 h-5" />
@@ -149,7 +149,7 @@ export default function AuthPage() {
           {mode === 'signup' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">الاسم الكامل</label>
+                <label className="block text-sm font-bold text-zinc-700 mb-1.5">الاسم الكامل</label>
                 <div className="relative">
                   <User className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                   <input
@@ -157,13 +157,13 @@ export default function AuthPage() {
                     required
                     value={form.displayName}
                     onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
-                    className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                    className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 outline-none focus:border-zinc-400 transition-colors"
                     placeholder="محمد أحمد"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">رقم الهاتف</label>
+                <label className="block text-sm font-bold text-zinc-700 mb-1.5">رقم الهاتف</label>
                 <div className="relative">
                   <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                   <input
@@ -171,7 +171,7 @@ export default function AuthPage() {
                     required
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                    className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 outline-none focus:border-zinc-400 transition-colors"
                     placeholder="0555..."
                   />
                 </div>
@@ -179,7 +179,7 @@ export default function AuthPage() {
             </>
           )}
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">البريد الإلكتروني</label>
+            <label className="block text-sm font-bold text-zinc-700 mb-1.5">البريد الإلكتروني</label>
             <div className="relative">
               <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
               <input
@@ -187,13 +187,13 @@ export default function AuthPage() {
                 required
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 outline-none focus:border-zinc-400 transition-colors"
                 placeholder="example@email.com"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1.5">كلمة المرور</label>
+            <label className="block text-sm font-bold text-zinc-700 mb-1.5">كلمة المرور</label>
             <div className="relative">
               <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
               <input
@@ -202,14 +202,14 @@ export default function AuthPage() {
                 minLength={6}
                 value={form.password}
                 onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 outline-none focus:border-zinc-400 transition-colors"
                 placeholder="••••••••"
               />
             </div>
           </div>
           {mode === 'signup' && (
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">تأكيد كلمة المرور</label>
+              <label className="block text-sm font-bold text-zinc-700 mb-1.5">تأكيد كلمة المرور</label>
               <div className="relative">
                 <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                 <input
@@ -218,7 +218,7 @@ export default function AuthPage() {
                   minLength={6}
                   value={form.confirmPassword}
                   onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 focus:ring-2 focus:ring-zinc-200 outline-none transition-all"
+                  className="w-full border border-zinc-200 rounded-xl pr-11 pl-4 py-3 outline-none focus:border-zinc-400 transition-colors"
                   placeholder="••••••••"
                 />
               </div>
@@ -227,7 +227,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-3.5 rounded-full transition-all shadow-lg shadow-zinc-900/10"
+            className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-3.5 rounded-full transition-colors"
           >
             {submitting ? 'جاري التحميل...' : mode === 'signup' ? 'إنشاء الحساب' : 'تسجيل الدخول'}
           </button>
@@ -238,14 +238,14 @@ export default function AuthPage() {
             <div className="w-full border-t border-zinc-200" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-3 text-zinc-500">أو</span>
+            <span className="bg-white px-3 text-zinc-500 font-bold">أو</span>
           </div>
         </div>
 
         <button
           onClick={handleGoogle}
           disabled={submitting}
-          className="w-full border border-zinc-200 hover:bg-zinc-50 text-zinc-900 font-bold py-3 rounded-full transition-all flex items-center justify-center gap-2"
+          className="w-full border border-zinc-200 hover:bg-zinc-100 text-zinc-900 font-bold py-3 rounded-full transition-colors flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
