@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   Star,
   User,
+  Loader2,
 } from 'lucide-react';
 
 const conditionLabels: Record<string, string> = {
@@ -60,11 +61,13 @@ export default function ProductDetailPage() {
   const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [related, setRelated] = useState<Product[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderError, setOrderError] = useState('');
   const [form, setForm] = useState({
     buyerName: user?.displayName || '',
     buyerPhone: user?.phone || '',
@@ -77,31 +80,39 @@ export default function ProductDetailPage() {
   const [reviewForm, setReviewForm] = useState({ rating: 0, comment: '' });
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [reviewError, setReviewError] = useState('');
   const viewed = useRef(false);
 
   useEffect(() => {
     setLoading(true);
+    setLoadError('');
     getProduct(id)
       .then((p) => {
         setProduct(p);
         if (p) {
           setSelectedImage(0);
-          setForm({
-            buyerName: user?.displayName || '',
-            buyerPhone: user?.phone || '',
-            buyerEmail: user?.email || '',
-            buyerAddress: '',
-            notes: '',
-          });
-          getProducts({ category: p.category, sellerId: p.sellerId })
+          getProducts({ category: p.category })
             .then((list) => setRelated((list || []).filter((x) => x.id !== p.id).slice(0, 4)))
             .catch(() => setRelated([]));
-          getSellerRating(p.sellerId).then(setRating);
-          getSellerReviews(p.sellerId).then(setReviews);
+          getSellerRating(p.sellerId).then(setRating).catch(() => setRating({ rating: 0, count: 0 }));
+          getSellerReviews(p.sellerId).then(setReviews).catch(() => setReviews([]));
         }
       })
+      .catch(() => {
+        setProduct(null);
+        setLoadError('تعذر تحميل المنتج. تحقق من اتصالك وحاول مرة أخرى.');
+      })
       .finally(() => setLoading(false));
-  }, [id, user?.displayName, user?.phone, user?.email]);
+  }, [id]);
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      buyerName: current.buyerName || user?.displayName || '',
+      buyerPhone: current.buyerPhone || user?.phone || '',
+      buyerEmail: current.buyerEmail || user?.email || '',
+    }));
+  }, [user]);
 
   useEffect(() => {
     if (id && !viewed.current) {
@@ -112,7 +123,21 @@ export default function ProductDetailPage() {
 
   const onSubmitOrder = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.buyerName || !form.buyerPhone) return;
+    if (!product) return;
+    setOrderError('');
+    const missingOption = product.options?.find((option) => !selectedOptions[option.name]);
+    if (missingOption) {
+      setOrderError(`اختر ${missingOption.name} قبل إرسال الطلب.`);
+      return;
+    }
+    if (form.buyerName.trim().length < 2) {
+      setOrderError('أدخل اسمك الكامل.');
+      return;
+    }
+    if (form.buyerPhone.replace(/\D/g, '').length < 8) {
+      setOrderError('أدخل رقم هاتف صحيحاً.');
+      return;
+    }
     setOrderLoading(true);
     try {
       const order: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'status'> = {
@@ -133,6 +158,8 @@ export default function ProductDetailPage() {
       };
       await createOrder(order);
       setOrderSuccess(true);
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : 'تعذر إرسال الطلب. حاول مرة أخرى.');
     } finally {
       setOrderLoading(false);
     }
@@ -141,7 +168,11 @@ export default function ProductDetailPage() {
   const onSubmitReview = async (e: FormEvent) => {
     e.preventDefault();
     if (!user || !product) return;
-    if (reviewForm.rating < 1) return;
+    setReviewError('');
+    if (reviewForm.rating < 1) {
+      setReviewError('اختر تقييماً من نجمة إلى خمس نجوم.');
+      return;
+    }
     setReviewLoading(true);
     try {
       await addSellerReview(
@@ -159,6 +190,8 @@ export default function ProductDetailPage() {
       setReviews(newReviews);
       setReviewSuccess(true);
       setReviewForm({ rating: 0, comment: '' });
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : 'تعذر إرسال التقييم. حاول مرة أخرى.');
     } finally {
       setReviewLoading(false);
     }
@@ -166,19 +199,20 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center" dir="rtl">
-        جاري تحميل المنتج...
+      <div className="page-shell flex min-h-[60vh] items-center justify-center gap-3 font-extrabold text-slate-600" dir="rtl">
+        <Loader2 className="h-7 w-7 animate-spin text-emerald-700" />جاري تحميل المنتج...
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center" dir="rtl">
-        <h1 className="text-xl font-black text-zinc-900 mb-2">المنتج غير موجود</h1>
-        <Link href="/search" className="text-zinc-600 hover:text-zinc-900 font-bold">
-          العودة إلى المنتجات
-        </Link>
+      <div className="page-shell flex min-h-[60vh] items-center justify-center text-center" dir="rtl">
+        <div className="surface-card w-full max-w-md p-8">
+          <h1 className="text-2xl font-black text-slate-950">{loadError ? 'تعذر عرض المنتج' : 'المنتج غير موجود'}</h1>
+          <p className="mt-3 leading-7 text-slate-600">{loadError || 'ربما تم حذف المنتج أو إيقاف عرضه.'}</p>
+          <Link href="/search" className="btn-primary mt-6 w-full">العودة إلى المنتجات</Link>
+        </div>
       </div>
     );
   }
@@ -189,13 +223,14 @@ export default function ProductDetailPage() {
       : 0;
 
   const canReview = Boolean(user && user.uid !== product.sellerId);
+  const canOrder = !user || user.uid !== product.sellerId;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" dir="rtl">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="page-shell" dir="rtl">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl border border-zinc-200 p-4">
-            <div className="relative aspect-square md:aspect-[16/10] bg-zinc-100 rounded-2xl overflow-hidden">
+          <div className="surface-card p-3 sm:p-4">
+            <div className="relative aspect-square overflow-hidden rounded-2xl bg-slate-100 md:aspect-[16/10]">
               <Image
                 src={product.images[selectedImage] || '/images/placeholder.svg'}
                 alt={product.title}
@@ -206,19 +241,19 @@ export default function ProductDetailPage() {
                 priority
               />
               {discount > 0 && (
-                <span className="absolute top-3 left-3 bg-zinc-900 text-white font-bold px-3 py-1 rounded-full">
+                <span className="absolute left-3 top-3 rounded-lg bg-emerald-700 px-3 py-1 font-extrabold text-white">
                   -{discount}%
                 </span>
               )}
             </div>
             {product.images.length > 1 && (
-              <div className="flex gap-3 mt-4 overflow-x-auto p-1">
+              <div className="mt-4 flex gap-3 overflow-x-auto p-1">
                 {product.images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
-                    className={`relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-colors ${
-                      selectedImage === i ? 'border-zinc-900' : 'border-zinc-200'
+                    className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-colors ${
+                      selectedImage === i ? 'border-emerald-700' : 'border-slate-200'
                     }`}
                   >
                     <Image src={img} alt="" fill sizes="80px" className="object-cover" unoptimized />
@@ -228,9 +263,9 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-zinc-200 p-6 mt-6">
+          <div className="surface-card mt-6 p-5 sm:p-7">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <span className="bg-zinc-100 text-zinc-700 text-sm font-bold px-3 py-1 rounded-full">
+              <span className="rounded-lg bg-emerald-50 px-3 py-1 text-sm font-extrabold text-emerald-800">
                 {product.category}
               </span>
               <span
@@ -245,11 +280,11 @@ export default function ProductDetailPage() {
                 {product.views}
               </span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black text-zinc-900 mb-4">
+            <h1 className="mb-4 text-2xl font-black text-slate-950 md:text-3xl">
               {product.title}
             </h1>
             <div className="flex items-end gap-3 mb-6">
-              <span className="text-3xl font-black text-zinc-900">
+              <span className="text-3xl font-black text-emerald-700">
                 {product.price.toLocaleString('ar-DZ')} د.ج
               </span>
               {product.originalPrice && product.originalPrice > product.price && (
@@ -259,7 +294,7 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            <div className="text-zinc-700 leading-relaxed whitespace-pre-wrap text-base font-bold">
+            <div className="whitespace-pre-wrap text-base font-medium leading-8 text-slate-700">
               {product.description}
             </div>
 
@@ -277,7 +312,7 @@ export default function ProductDetailPage() {
                         onChange={(e) =>
                           setSelectedOptions((prev) => ({ ...prev, [opt.name]: e.target.value }))
                         }
-                        className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-zinc-400 transition-colors"
+                        className="field"
                       >
                         <option value="">اختر {opt.name}</option>
                         {opt.values.map((v) => (
@@ -298,7 +333,7 @@ export default function ProductDetailPage() {
               <h3 className="text-xl font-black text-zinc-900 mb-4">تقييمات البائع</h3>
               <div className="space-y-4">
                 {reviews.slice(0, 3).map((review) => (
-                  <div key={review.id} className="bg-white rounded-2xl border border-zinc-200 p-5">
+                  <div key={review.id} className="surface-card p-5">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className="w-9 h-9 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-700">
@@ -328,7 +363,7 @@ export default function ProductDetailPage() {
                   <Link
                     key={p.id}
                     href={`/product/${p.id}`}
-                    className="bg-white rounded-2xl border border-zinc-200 overflow-hidden hover:border-zinc-900 transition-colors"
+                    className="surface-card overflow-hidden transition hover:-translate-y-0.5 hover:border-emerald-300"
                   >
                     <div className="relative aspect-[4/3] bg-zinc-100">
                       <Image
@@ -342,7 +377,7 @@ export default function ProductDetailPage() {
                     </div>
                     <div className="p-3">
                       <h4 className="font-bold text-zinc-900 line-clamp-2">{p.title}</h4>
-                      <p className="text-zinc-900 font-bold mt-1">
+                      <p className="mt-1 font-black text-emerald-700">
                         {p.price.toLocaleString('ar-DZ')} د.ج
                       </p>
                     </div>
@@ -354,10 +389,10 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-zinc-200 p-6 lg:sticky lg:top-24">
+          <div className="surface-card p-5 sm:p-6 lg:sticky lg:top-24">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-14 h-14 bg-zinc-100 rounded-full flex items-center justify-center">
-                <Store className="w-7 h-7 text-zinc-700" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
+                <Store className="h-7 w-7 text-emerald-700" />
               </div>
               <div>
                 <h3 className="font-bold text-zinc-900">{product.sellerName}</h3>
@@ -406,20 +441,21 @@ export default function ProductDetailPage() {
             </div>
 
             {orderSuccess ? (
-              <div className="bg-zinc-100 text-zinc-900 p-5 rounded-2xl flex items-start gap-2 font-bold">
+              <div className="notice-success flex items-start gap-2">
                 <CheckCircle className="w-5 h-5 flex-shrink-0" />
                 <p>تم إرسال طلبك بنجاح. سيتواصل البائع معك قريباً.</p>
               </div>
-            ) : (
+            ) : canOrder ? (
               <form onSubmit={onSubmitOrder} className="space-y-3">
-                <h4 className="font-bold text-zinc-900">طلب شراء</h4>
+                <h4 className="font-black text-slate-950">أرسل طلب شراء</h4>
+                {orderError && <div className="notice-error text-sm" role="alert">{orderError}</div>}
                 <input
                   type="text"
                   required
                   placeholder="الاسم الكامل"
                   value={form.buyerName}
                   onChange={(e) => setForm((f) => ({ ...f, buyerName: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
+                  className="field text-sm"
                 />
                 <input
                   type="tel"
@@ -427,48 +463,51 @@ export default function ProductDetailPage() {
                   placeholder="رقم الهاتف"
                   value={form.buyerPhone}
                   onChange={(e) => setForm((f) => ({ ...f, buyerPhone: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
+                  className="field text-sm"
                 />
                 <input
                   type="email"
                   placeholder="البريد الإلكتروني (اختياري)"
                   value={form.buyerEmail}
                   onChange={(e) => setForm((f) => ({ ...f, buyerEmail: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
+                  className="field text-sm"
                 />
                 <input
                   type="text"
                   placeholder="العنوان (اختياري)"
                   value={form.buyerAddress}
                   onChange={(e) => setForm((f) => ({ ...f, buyerAddress: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
+                  className="field text-sm"
                 />
                 <textarea
                   placeholder="ملاحظات (اختياري)"
                   rows={2}
                   value={form.notes}
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
+                  className="field min-h-20 resize-y text-sm"
                 />
                 <button
                   type="submit"
                   disabled={orderLoading}
-                  className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-3 rounded-full transition-colors"
+                  className="btn-primary w-full"
                 >
-                  {orderLoading ? 'جاري الإرسال...' : 'اطلب الآن'}
+                  {orderLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {orderLoading ? 'جاري الإرسال...' : 'إرسال الطلب'}
                 </button>
                 <p className="text-xs text-zinc-500 text-center font-bold">
                   لا يتم خصم أي مبلغ. البائع سيتواصل معك لتأكيد الطلب.
                 </p>
               </form>
+            ) : (
+              <div className="notice-info">هذا منتجك، لذلك لا يمكنك إرسال طلب شراء لنفسك.</div>
             )}
 
             <div className="mt-6 pt-6 border-t border-zinc-100 space-y-3">
               <h4 className="font-bold text-zinc-900">قيّم البائع</h4>
               {!user ? (
                 <Link
-                  href="/auth"
-                  className="block w-full text-center bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold py-2.5 rounded-full transition-colors"
+                  href={`/auth?next=${encodeURIComponent(`/product/${product.id}`)}`}
+                  className="btn-secondary w-full"
                 >
                   سجّل الدخول للتقييم
                 </Link>
@@ -476,6 +515,7 @@ export default function ProductDetailPage() {
                 <p className="text-center text-zinc-700 font-bold">شكراً! تم إرسال تقييمك.</p>
               ) : canReview ? (
                 <form onSubmit={onSubmitReview} className="space-y-3">
+                  {reviewError && <div className="notice-error text-sm" role="alert">{reviewError}</div>}
                   <div className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <button
@@ -497,12 +537,12 @@ export default function ProductDetailPage() {
                     rows={2}
                     value={reviewForm.comment}
                     onChange={(e) => setReviewForm((f) => ({ ...f, comment: e.target.value }))}
-                    className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-zinc-400 transition-colors"
+                    className="field min-h-20 resize-y text-sm"
                   />
                   <button
                     type="submit"
                     disabled={reviewLoading || reviewForm.rating === 0}
-                    className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-2.5 rounded-full transition-colors"
+                    className="btn-primary w-full"
                   >
                     {reviewLoading ? 'جاري الإرسال...' : 'إرسال التقييم'}
                   </button>

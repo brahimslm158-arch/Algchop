@@ -8,13 +8,17 @@ import Footer from '@/components/Footer';
 const notoArabic = Noto_Sans_Arabic({
   variable: '--font-noto-arabic',
   subsets: ['arabic'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Algshop - اشترِ وبيع كل ما تريد',
+  title: {
+    default: 'Algshop | سوق الجزائر',
+    template: '%s | Algshop',
+  },
   description:
-    'منصة alg shop للإعلان عن المنتجات للبيع والشراء مع إضافة الصور والوصف والأنواع والخيارات.',
+    'منصة جزائرية واضحة وآمنة لبيع وشراء المنتجات والتواصل مباشرة مع البائعين.',
 };
 
 export default function RootLayout({
@@ -23,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" className={`${notoArabic.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-white text-zinc-900 font-sans">
+    <html lang="ar" dir="rtl" className={`${notoArabic.variable} h-full`} data-scroll-behavior="smooth">
+      <body className="flex min-h-full flex-col font-sans text-slate-900">
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>

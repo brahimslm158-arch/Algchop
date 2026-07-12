@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ImagePlus, Loader2, Plus, Store, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { createProduct, uploadImages } from '@/lib/services';
 import type { Product } from '@/types';
-import { Upload, X, Plus, Trash2, Loader2, Store } from 'lucide-react';
 
 const categories = ['إلكترونيات', 'أزياء', 'منزل', 'رياضة', 'سيارات', 'كتب', 'ألعاب', 'خدمات'];
-const conditions = [
+const conditions: { value: Product['condition']; label: string }[] = [
   { value: 'new', label: 'جديد' },
   { value: 'used', label: 'مستعمل' },
   { value: 'refurbished', label: 'مجدد' },
 ];
+const maxImages = 6;
+const maxImageSize = 5 * 1024 * 1024;
 
 interface OptionInput {
   name: string;
@@ -23,6 +26,7 @@ interface OptionInput {
 export default function SellPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const previewsRef = useRef<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -35,344 +39,237 @@ export default function SellPage() {
     price: '',
     originalPrice: '',
     category: '',
-    condition: 'new' as 'new' | 'used' | 'refurbished',
+    condition: 'new' as Product['condition'],
     phone: '',
     email: '',
     location: '',
   });
 
   useEffect(() => {
-    if (user?.phone) {
-      setForm((f) => ({ ...f, phone: user.phone || '' }));
-    }
+    if (!user) return;
+    setForm((current) => ({
+      ...current,
+      phone: current.phone || user.phone || '',
+      email: current.email || user.email || '',
+    }));
   }, [user]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files ? Array.from(e.target.files) : [];
-    if (selected.length + previews.length > 6) {
-      setError('لا يمكن رفع أكثر من 6 صور');
+  useEffect(() => {
+    previewsRef.current = previews;
+  }, [previews]);
+
+  useEffect(() => () => previewsRef.current.forEach(URL.revokeObjectURL), []);
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = '';
+    setError('');
+
+    if (selected.some((file) => !file.type.startsWith('image/'))) {
+      setError('يمكن رفع ملفات الصور فقط.');
       return;
     }
-    setFiles((prev) => [...prev, ...selected]);
-    setPreviews((prev) => [...prev, ...selected.map((f) => URL.createObjectURL(f))]);
+    if (selected.some((file) => file.size > maxImageSize)) {
+      setError('حجم كل صورة يجب ألا يتجاوز 5 ميغابايت.');
+      return;
+    }
+    if (selected.length + files.length > maxImages) {
+      setError(`يمكن رفع ${maxImages} صور كحد أقصى.`);
+      return;
+    }
+
+    setFiles((current) => [...current, ...selected]);
+    setPreviews((current) => [...current, ...selected.map(URL.createObjectURL)]);
   };
 
   const removeImage = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
+    URL.revokeObjectURL(previews[index]);
+    setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setPreviews((current) => current.filter((_, itemIndex) => itemIndex !== index));
   };
 
-  const addOption = () => setOptions((prev) => [...prev, { name: '', values: '' }]);
-  const updateOption = (i: number, field: keyof OptionInput, value: string) => {
-    setOptions((prev) => prev.map((o, idx) => (idx === i ? { ...o, [field]: value } : o)));
+  const updateOption = (index: number, field: keyof OptionInput, value: string) => {
+    setOptions((current) => current.map((option, optionIndex) => optionIndex === index ? { ...option, [field]: value } : option));
   };
-  const removeOption = (i: number) => setOptions((prev) => prev.filter((_, idx) => idx !== i));
 
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const validate = () => {
+    const price = Number(form.price);
+    const originalPrice = form.originalPrice ? Number(form.originalPrice) : undefined;
+    if (form.title.trim().length < 3) return 'اسم المنتج يجب أن يتكون من 3 أحرف على الأقل.';
+    if (form.description.trim().length < 20) return 'أضف وصفاً واضحاً من 20 حرفاً على الأقل.';
+    if (!Number.isFinite(price) || price <= 0) return 'أدخل سعراً صحيحاً أكبر من صفر.';
+    if (originalPrice !== undefined && (!Number.isFinite(originalPrice) || originalPrice <= price)) {
+      return 'السعر قبل التخفيض يجب أن يكون أكبر من السعر الحالي.';
+    }
+    if (!form.category) return 'اختر فئة المنتج.';
+    if (form.phone.replace(/\D/g, '').length < 8) return 'أدخل رقم هاتف صحيحاً للتواصل.';
+    if (!files.length) return 'أضف صورة واحدة على الأقل للمنتج.';
+    return '';
+  };
+
+  const onSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const validationError = validate();
+    setError(validationError);
     setSuccess('');
-
-    if (!form.title || !form.description || !form.price || !form.category || !form.phone) {
-      setError('يرجى ملء جميع الحقول المطلوبة');
-      return;
-    }
-    if (files.length === 0) {
-      setError('يرجى رفع صورة واحدة على الأقل');
-      return;
-    }
+    if (validationError || !user) return;
 
     setLoading(true);
     try {
       const imageUrls = await uploadImages(files);
-      const product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'views'> = {
-        title: form.title,
-        description: form.description,
+      const created = await createProduct({
+        title: form.title.trim(),
+        description: form.description.trim(),
         price: Number(form.price),
         originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
         category: form.category,
         condition: form.condition,
         images: imageUrls,
-        options: options.length
-          ? options
-              .filter((o) => o.name && o.values)
-              .map((o) => ({ name: o.name, values: o.values.split(',').map((v) => v.trim()) }))
-          : undefined,
-        phone: form.phone,
-        email: form.email || undefined,
-        location: form.location || undefined,
-        sellerId: user?.uid || 'guest',
-        sellerName: user?.displayName || form.phone,
-        sellerPhone: form.phone,
-        sellerEmail: form.email || undefined,
-        sellerPhotoURL: user?.photoURL || undefined,
+        options: options
+          .map((option) => ({
+            name: option.name.trim(),
+            values: option.values.split(/[،,]/).map((value) => value.trim()).filter(Boolean),
+          }))
+          .filter((option) => option.name && option.values.length),
+        phone: form.phone.trim(),
+        email: form.email.trim() || undefined,
+        location: form.location.trim() || undefined,
+        sellerId: user.uid,
+        sellerName: user.displayName || form.phone.trim(),
+        sellerPhone: form.phone.trim(),
+        sellerEmail: form.email.trim() || undefined,
+        sellerPhotoURL: user.photoURL || undefined,
         status: 'active',
-      };
-      const created = await createProduct(product);
-      setSuccess('تم إضافة المنتج بنجاح!');
-      setTimeout(() => router.push(`/product/${created.id}`), 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ أثناء نشر المنتج');
+      });
+      setSuccess('تم نشر المنتج بنجاح. سيتم نقلك إلى صفحته الآن.');
+      router.push(`/product/${created.id}`);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'تعذر نشر المنتج. حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }
   };
 
   if (authLoading) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center" dir="rtl">
-        جاري التحميل...
-      </div>
-    );
+    return <div className="page-shell flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-emerald-700" /></div>;
   }
 
-  if (!user) {
+  if (!user || user.userType !== 'seller') {
+    const isBuyer = user?.userType === 'buyer';
     return (
-      <div className="max-w-md mx-auto px-4 py-16 text-center" dir="rtl">
-        <div className="bg-white rounded-2xl border border-zinc-200 p-8">
-          <div className="w-14 h-14 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Store className="w-7 h-7 text-zinc-700" />
-          </div>
-          <h1 className="text-xl font-black text-zinc-900 mb-2">يجب تسجيل الدخول للبيع</h1>
-          <p className="text-zinc-600 mb-6 text-sm font-bold">سجّل الدخول أو أنشئ حساباً جديداً لإضافة منتجاتك.</p>
-          <a
-            href="/auth"
-            className="inline-block w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold px-8 py-3 rounded-full transition-colors"
-          >
-            تسجيل الدخول / حساب جديد
-          </a>
-        </div>
-      </div>
-    );
-  }
-
-  if (user.userType === 'buyer') {
-    return (
-      <div className="max-w-md mx-auto px-4 py-16 text-center" dir="rtl">
-        <div className="bg-white rounded-2xl border border-zinc-200 p-8">
-          <div className="w-14 h-14 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Store className="w-7 h-7 text-zinc-700" />
-          </div>
-          <h1 className="text-xl font-black text-zinc-900 mb-2">يجب أن يكون حسابك بائعاً</h1>
-          <p className="text-zinc-600 mb-6 text-sm font-bold">هذه الصفحة مخصصة للبائعين فقط. أنشئ حساباً بائعاً لإضافة منتجاتك.</p>
-          <a
-            href="/auth"
-            className="inline-block w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold px-8 py-3 rounded-full transition-colors"
-          >
-            إنشاء حساب بائع
-          </a>
+      <div className="page-shell flex min-h-[60vh] items-center justify-center" dir="rtl">
+        <div className="surface-card w-full max-w-md p-8 text-center">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><Store className="h-8 w-8" /></span>
+          <h1 className="mt-5 text-2xl font-black text-slate-950">{isBuyer ? 'هذه المساحة مخصصة للبائعين' : 'سجّل الدخول لبدء البيع'}</h1>
+          <p className="mt-3 leading-7 text-slate-600">{isBuyer ? 'أنشئ حساب بائع منفصلاً لتتمكن من إضافة منتجاتك وإدارة الطلبات.' : 'أنشئ حساب بائع، ثم أضف صور المنتج وسعره وبيانات التواصل.'}</p>
+          <Link href="/auth?mode=signup&type=seller&next=%2Fsell" className="btn-primary mt-6 w-full">{isBuyer ? 'إنشاء حساب بائع' : 'الدخول أو إنشاء حساب بائع'}</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10" dir="rtl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-zinc-900 mb-1">أضف منتج للبيع</h1>
-        <p className="text-zinc-600 font-bold text-sm">املأ التفاصيل أدناه لعرض منتجك للمشترين.</p>
+    <div className="page-shell max-w-4xl" dir="rtl">
+      <div className="mb-7">
+        <span className="text-sm font-extrabold text-emerald-700">لوحة البائع</span>
+        <h1 className="mt-2 text-3xl font-black text-slate-950">أضف منتجاً جديداً</h1>
+        <p className="mt-2 text-slate-600">الحقول الواضحة والصور الجيدة تساعد المشترين على اتخاذ قرار أسرع.</p>
       </div>
 
-      <form onSubmit={onSubmit} className="bg-white rounded-2xl border border-zinc-200 p-6 md:p-8 space-y-6">
-        {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm font-bold">{error}</div>
-        )}
-        {success && (
-          <div className="bg-zinc-900 text-white p-3 rounded-xl text-sm font-bold">{success}</div>
-        )}
+      <form onSubmit={onSubmit} className="surface-card space-y-8 p-5 sm:p-8">
+        {error && <div className="notice-error" role="alert">{error}</div>}
+        {success && <div className="notice-success" role="status">{success}</div>}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-bold text-zinc-900 mb-2">اسم المنتج *</label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-              placeholder="مثال: آيفون 14 Pro 256GB"
-            />
+        <FormSection number="1" title="معلومات المنتج">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="اسم المنتج" required className="sm:col-span-2">
+              <input className="field" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="مثال: هاتف سامسونج Galaxy S24" maxLength={120} />
+            </Field>
+            <Field label="الوصف" required className="sm:col-span-2">
+              <textarea className="field min-h-36 resize-y" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="اذكر الحالة والمواصفات وما يشمله العرض..." maxLength={3000} />
+            </Field>
+            <Field label="السعر الحالي (د.ج)" required>
+              <input className="field" type="number" min="1" step="1" inputMode="numeric" value={form.price} onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))} placeholder="85000" />
+            </Field>
+            <Field label="السعر قبل التخفيض">
+              <input className="field" type="number" min="1" step="1" inputMode="numeric" value={form.originalPrice} onChange={(event) => setForm((current) => ({ ...current, originalPrice: event.target.value }))} placeholder="95000" />
+            </Field>
+            <Field label="الفئة" required>
+              <select className="field" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}>
+                <option value="">اختر الفئة</option>
+                {categories.map((category) => <option key={category}>{category}</option>)}
+              </select>
+            </Field>
+            <Field label="حالة المنتج" required>
+              <select className="field" value={form.condition} onChange={(event) => setForm((current) => ({ ...current, condition: event.target.value as Product['condition'] }))}>
+                {conditions.map((condition) => <option key={condition.value} value={condition.value}>{condition.label}</option>)}
+              </select>
+            </Field>
           </div>
+        </FormSection>
 
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-bold text-zinc-900 mb-2">الوصف *</label>
-            <textarea
-              rows={4}
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-              placeholder="اكتب وصفاً مفصلاً للمنتج..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-zinc-900 mb-2">السعر (د.ج) *</label>
-            <input
-              type="number"
-              value={form.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-              placeholder="0.00"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-zinc-900 mb-2">السعر قبل التخفيض (اختياري)</label>
-            <input
-              type="number"
-              value={form.originalPrice}
-              onChange={(e) => setForm((f) => ({ ...f, originalPrice: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-              placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-zinc-900 mb-2">الفئة *</label>
-            <select
-              value={form.category}
-              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-            >
-              <option value="">اختر الفئة</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-zinc-900 mb-2">الحالة *</label>
-            <select
-              value={form.condition}
-              onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value as Product['condition'] }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-            >
-              {conditions.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold text-zinc-900 mb-3">صور المنتج * (حد أقصى 6)</label>
-          <div className="flex flex-wrap gap-3">
-            {previews.map((src, i) => (
-              <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-zinc-200">
-                <Image src={src} alt="" fill sizes="96px" className="object-cover" unoptimized />
-                <button
-                  type="button"
-                  onClick={() => removeImage(i)}
-                  className="absolute top-1 left-1 bg-zinc-900 text-white p-1 rounded-full hover:bg-zinc-700 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+        <FormSection number="2" title="صور المنتج" description="حتى 6 صور، وبحجم لا يتجاوز 5 ميغابايت للصورة.">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {previews.map((preview, index) => (
+              <div key={preview} className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <Image src={preview} alt={`معاينة الصورة ${index + 1}`} fill sizes="(max-width: 640px) 50vw, 180px" className="object-cover" unoptimized />
+                <button type="button" onClick={() => removeImage(index)} className="absolute left-2 top-2 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950/85 text-white" aria-label={`حذف الصورة ${index + 1}`}><X className="h-4 w-4" /></button>
+                {index === 0 && <span className="absolute bottom-2 right-2 rounded-lg bg-white/90 px-2 py-1 text-xs font-extrabold text-slate-800">الصورة الرئيسية</span>}
               </div>
             ))}
-            {previews.length < 6 && (
-              <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-zinc-300 rounded-xl cursor-pointer hover:border-zinc-900 hover:bg-zinc-100 transition-colors">
-                <Upload className="w-6 h-6 text-zinc-400" />
-                <span className="text-xs font-bold text-zinc-500 mt-1">رفع</span>
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+            {previews.length < maxImages && (
+              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/60 p-3 text-center text-emerald-800 hover:bg-emerald-50">
+                <ImagePlus className="h-7 w-7" />
+                <span className="mt-2 text-sm font-extrabold">اختر الصور</span>
+                <span className="mt-1 text-xs">{previews.length}/{maxImages}</span>
+                <input type="file" accept="image/*" multiple className="sr-only" onChange={handleFileChange} />
               </label>
             )}
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <label className="block text-sm font-bold text-zinc-900">الخيارات الاختيارية</label>
-            <button
-              type="button"
-              onClick={addOption}
-              className="text-sm text-zinc-900 flex items-center gap-1 hover:underline font-bold"
-            >
-              <Plus className="w-4 h-4" />
-              إضافة خيار
-            </button>
-          </div>
+        <FormSection number="3" title="خيارات المنتج" description="أضفها فقط إذا كان المنتج متوفراً بألوان أو أحجام مختلفة.">
           <div className="space-y-3">
-            {options.map((opt, i) => (
-              <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end bg-zinc-100 rounded-xl p-3 border border-zinc-200">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">اسم الخيار</label>
-                  <input
-                    type="text"
-                    value={opt.name}
-                    onChange={(e) => updateOption(i, 'name', e.target.value)}
-                    placeholder="مثال: اللون"
-                    className="w-full border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:border-zinc-400 transition-colors"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="block text-xs font-bold text-zinc-500 mb-1">القيم (افصل بفاصلة)</label>
-                    <input
-                      type="text"
-                      value={opt.values}
-                      onChange={(e) => updateOption(i, 'values', e.target.value)}
-                      placeholder="أحمر، أزرق، أخضر"
-                      className="w-full border border-zinc-200 rounded-xl px-3 py-2 outline-none focus:border-zinc-400 transition-colors"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeOption(i)}
-                    className="text-red-600 p-2 hover:bg-red-100 rounded-xl transition-colors"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
+            {options.map((option, index) => (
+              <div key={index} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_1.5fr_auto] sm:items-end">
+                <Field label="اسم الخيار"><input className="field" value={option.name} onChange={(event) => updateOption(index, 'name', event.target.value)} placeholder="اللون" /></Field>
+                <Field label="القيم، مفصولة بفاصلة"><input className="field" value={option.values} onChange={(event) => updateOption(index, 'values', event.target.value)} placeholder="أسود، أبيض، أزرق" /></Field>
+                <button type="button" onClick={() => setOptions((current) => current.filter((_, optionIndex) => optionIndex !== index))} className="btn-secondary h-12 px-3 text-red-700" aria-label="حذف الخيار"><Trash2 className="h-5 w-5" /></button>
               </div>
             ))}
+            <button type="button" onClick={() => setOptions((current) => [...current, { name: '', values: '' }])} className="btn-secondary"><Plus className="h-4 w-4" />إضافة خيار</button>
           </div>
-        </div>
+        </FormSection>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-bold text-zinc-900 mb-2">رقم الهاتف للتواصل *</label>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-              placeholder="0555..."
-            />
+        <FormSection number="4" title="التواصل والموقع">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="رقم الهاتف" required><input className="field" type="tel" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="0555 00 00 00" dir="ltr" /></Field>
+            <Field label="البريد الإلكتروني"><input className="field" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="seller@example.com" dir="ltr" /></Field>
+            <Field label="المدينة أو الولاية" className="sm:col-span-2"><input className="field" value={form.location} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} placeholder="الجزائر العاصمة" /></Field>
           </div>
-          <div>
-            <label className="block text-sm font-bold text-zinc-900 mb-2">البريد الإلكتروني (اختياري)</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-              placeholder="example@email.com"
-            />
-          </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <label className="block text-sm font-bold text-zinc-900 mb-2">الموقع (اختياري)</label>
-          <input
-            type="text"
-            value={form.location}
-            onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-            className="w-full border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:border-zinc-400 transition-colors"
-            placeholder="المدينة / الولاية"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold py-3.5 rounded-full transition-colors flex items-center justify-center gap-2"
-        >
-          {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-          {loading ? 'جاري النشر...' : 'نشر المنتج'}
+        <button type="submit" disabled={loading} className="btn-primary w-full">
+          {loading && <Loader2 className="h-5 w-5 animate-spin" />}
+          {loading ? 'جاري رفع الصور ونشر المنتج...' : 'نشر المنتج'}
         </button>
       </form>
     </div>
   );
+}
+
+function FormSection({ number, title, description, children }: { number: string; title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <div className="mb-5 flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-sm font-black text-white">{number}</span>
+        <div><h2 className="text-lg font-black text-slate-950">{title}</h2>{description && <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>}</div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Field({ label, required = false, className = '', children }: { label: string; required?: boolean; className?: string; children: React.ReactNode }) {
+  return <label className={`block ${className}`}><span className="mb-2 block text-sm font-extrabold text-slate-800">{label}{required && <span className="mr-1 text-red-600">*</span>}</span>{children}</label>;
 }

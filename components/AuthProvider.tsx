@@ -40,14 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    getCurrentUser().then((current) => {
+    const unsubscribe = onAuthStateChange((next) => {
       if (mounted) {
-        setUser(current);
+        setUser(next);
         setLoading(false);
       }
-    });
-    const unsubscribe = onAuthStateChange((next) => {
-      if (mounted) setUser(next);
     });
     return () => {
       mounted = false;

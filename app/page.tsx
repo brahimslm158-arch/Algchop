@@ -43,51 +43,65 @@ const steps = [
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    setError('');
     getProducts({})
       .then((data) => setProducts(data || []))
+      .catch(() => setError('تعذر تحميل المنتجات حالياً. أعد المحاولة بعد قليل.'))
       .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="flex flex-col">
       <Hero />
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 w-full">
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 mb-14" dir="rtl">
+      <section className="page-shell">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-extrabold text-emerald-700">وصول سريع</p>
+            <h2 className="mt-1 text-2xl font-black text-slate-950">تصفح حسب الفئة</h2>
+          </div>
+          <Link href="/search" className="text-sm font-extrabold text-emerald-700 hover:text-emerald-900">كل الفئات</Link>
+        </div>
+        <div className="mb-16 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8" dir="rtl">
           {categories.map((c) => {
             const Icon = c.icon;
             return (
               <Link
                 key={c.slug}
                 href={`/categories/${encodeURIComponent(c.slug)}`}
-                className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-zinc-200 hover:border-zinc-900 transition-colors group"
+                className="group flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-md"
               >
-                <div className="p-2.5 bg-zinc-100 rounded-xl group-hover:bg-zinc-900 group-hover:text-white transition-colors">
-                  <Icon className="w-6 h-6 text-zinc-700 group-hover:text-white" />
+                <div className="rounded-xl bg-emerald-50 p-3 text-emerald-700 transition-colors group-hover:bg-emerald-700 group-hover:text-white">
+                  <Icon className="h-6 w-6" />
                 </div>
-                <span className="text-sm font-bold text-zinc-700">{c.label}</span>
+                <span className="text-sm font-extrabold text-slate-700">{c.label}</span>
               </Link>
             );
           })}
         </div>
 
-        <div className="flex items-center justify-between mb-6" dir="rtl">
-          <h2 className="text-xl md:text-2xl font-black text-zinc-900">منتجات مميزة</h2>
+        <div className="mb-6 flex items-center justify-between gap-4" dir="rtl">
+          <div>
+            <p className="text-sm font-extrabold text-emerald-700">مختارات حديثة</p>
+            <h2 className="mt-1 text-2xl font-black text-slate-950">منتجات تستحق المشاهدة</h2>
+          </div>
           <Link
             href="/search"
-            className="flex items-center gap-1 text-zinc-600 hover:text-zinc-900 font-bold transition-colors"
+            className="flex shrink-0 items-center gap-1 font-extrabold text-emerald-700 transition-colors hover:text-emerald-900"
           >
             عرض الكل
             <ArrowLeft className="w-4 h-4" />
           </Link>
         </div>
-        <ProductList products={products} loading={loading} />
+        {error ? <div className="notice-error">{error}</div> : <ProductList products={products} loading={loading} />}
 
-        <div className="mt-20" dir="rtl">
+        <div id="how-it-works" className="mt-24 scroll-mt-36" dir="rtl">
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-black text-zinc-900 mb-3">كيف يعمل <span className="text-zinc-500">alg shop</span>؟</h2>
-            <p className="text-zinc-600 max-w-xl mx-auto font-bold">بيع وشراء في أربع خطوات بسيطة بدون تعقيد.</p>
+            <p className="text-sm font-extrabold text-emerald-700">خطوات بسيطة</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950 md:text-3xl">كيف يعمل Algshop؟</h2>
+            <p className="mx-auto mt-3 max-w-xl leading-7 text-slate-600">من العثور على المنتج إلى إتمام التواصل، كل شيء مرتب وواضح.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {steps.map((step, i) => {
@@ -95,13 +109,14 @@ export default function Home() {
               return (
                 <div
                   key={i}
-                  className="bg-white rounded-2xl border border-zinc-200 p-6 text-center"
+                  className="surface-card relative p-6 text-center"
                 >
-                  <div className="w-12 h-12 bg-zinc-100 text-zinc-900 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <Icon className="w-6 h-6" />
+                  <span className="absolute left-4 top-4 text-xs font-black text-slate-300">0{i + 1}</span>
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <Icon className="h-6 w-6" />
                   </div>
-                  <h3 className="font-bold text-zinc-900 mb-2">{step.title}</h3>
-                  <p className="text-sm text-zinc-600 font-bold">{step.desc}</p>
+                  <h3 className="mb-2 font-black text-slate-900">{step.title}</h3>
+                  <p className="text-sm leading-6 text-slate-600">{step.desc}</p>
                 </div>
               );
             })}

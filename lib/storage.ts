@@ -17,7 +17,8 @@ const s3Client = isCloudflareConfigured
   : null;
 
 function buildKey(filename: string): string {
-  const ext = filename.split('.').pop() || 'jpg';
+  const candidate = filename.split('.').pop()?.toLowerCase();
+  const ext = candidate && /^[a-z0-9]{2,5}$/.test(candidate) ? candidate : 'jpg';
   return `products/${randomUUID()}.${ext}`;
 }
 

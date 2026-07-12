@@ -1,313 +1,235 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from './AuthProvider';
+import { usePathname, useRouter } from 'next/navigation';
 import {
-  Search,
-  Menu,
-  X,
-  User,
-  Package,
-  LogOut,
-  PlusCircle,
-  ShoppingBag,
-  Store,
   ChevronDown,
-  Home,
   Grid3X3,
+  Home,
+  LogOut,
+  Menu,
+  Package,
+  Search,
+  Store,
+  User,
+  X,
 } from 'lucide-react';
+import Brand from './Brand';
+import { useAuth } from './AuthProvider';
 
-const categories = [
-  { slug: 'إلكترونيات', label: 'إلكترونيات' },
-  { slug: 'أزياء', label: 'أزياء' },
-  { slug: 'منزل', label: 'منزل' },
-  { slug: 'رياضة', label: 'رياضة' },
-  { slug: 'سيارات', label: 'سيارات' },
-  { slug: 'كتب', label: 'كتب' },
-  { slug: 'ألعاب', label: 'ألعاب' },
-  { slug: 'خدمات', label: 'خدمات' },
-];
+const categories = ['إلكترونيات', 'أزياء', 'منزل', 'رياضة', 'سيارات', 'كتب', 'ألعاب', 'خدمات'];
 
 export default function Header() {
-  const { user, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setOpen(false);
+    setMenuOpen(false);
+    setProfileOpen(false);
   }, [pathname]);
 
-  const onSearch = (e: FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-      setQuery('');
-      setOpen(false);
-    }
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    const closeProfile = (event: PointerEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', closeProfile);
+    return () => document.removeEventListener('pointerdown', closeProfile);
+  }, []);
+
+  const onSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const value = query.trim();
+    router.push(value ? `/search?q=${encodeURIComponent(value)}` : '/search');
+    setMenuOpen(false);
   };
 
-  const isActive = (href: string) => pathname === href;
-  const userTypeLabel = user?.userType === 'seller' ? 'بائع' : 'مشتري';
+  const handleSignOut = async () => {
+    setProfileOpen(false);
+    setMenuOpen(false);
+    await signOut();
+    router.push('/');
+  };
 
-  const Logo = (
-    <div className="inline-flex items-center gap-1.5" dir="ltr">
-      <div className="bg-zinc-900 text-white font-black px-2.5 py-1 rounded-lg text-lg tracking-tight">
-        alg
-      </div>
-      <span className="font-black text-xl tracking-tight text-zinc-900">shop</span>
-    </div>
-  );
+  const authHref = `/auth?next=${encodeURIComponent(pathname || '/')}`;
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-zinc-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 h-16">
-          <Link href="/" className="flex-shrink-0">
-            {Logo}
-          </Link>
+    <header className="sticky top-0 z-50 border-b border-emerald-950/10 bg-white/95 shadow-[0_6px_24px_rgba(15,50,43,0.05)] backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="shrink-0" aria-label="الصفحة الرئيسية">
+          <span className="hidden sm:inline"><Brand /></span>
+          <span className="sm:hidden"><Brand compact /></span>
+        </Link>
 
-          <form onSubmit={onSearch} className="flex-1 max-w-2xl mx-4" dir="ltr">
-            <div className="flex items-center rounded-full bg-zinc-100 border border-zinc-200 overflow-hidden">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="ابحث عن منتج، فئة، بائع..."
-                className="flex-1 px-4 py-3 bg-transparent text-zinc-900 outline-none"
-                dir="rtl"
-              />
-              <button
-                type="submit"
-                className="flex items-center justify-center w-10 h-10 m-1 bg-zinc-900 text-white rounded-full transition-colors"
-                aria-label="بحث"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            </div>
-          </form>
-
-          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-            {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900 font-bold bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-full px-3 py-2 transition-colors"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="max-w-[100px] truncate">{user.displayName || 'حسابي'}</span>
-                  <ChevronDown className={`w-3 h-3 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {profileOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-                    <div className="p-3 border-b border-zinc-100">
-                      <p className="font-bold text-zinc-900 text-sm truncate">{user.displayName || 'حسابي'}</p>
-                      <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-                      <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
-                        {userTypeLabel}
-                      </span>
-                    </div>
-                    <div className="p-2 space-y-1">
-                      <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zinc-100 text-zinc-700 text-sm font-bold transition-colors">
-                        <Package className="w-4 h-4" />
-                        <span>إدارة الملف الشخصي</span>
-                      </Link>
-                      {user.userType === 'seller' && (
-                        <Link href="/sell" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zinc-100 text-zinc-700 text-sm font-bold transition-colors">
-                          <PlusCircle className="w-4 h-4" />
-                          <span>أضف منتج للبيع</span>
-                        </Link>
-                      )}
-                      <button
-                        onClick={() => {
-                          setProfileOpen(false);
-                          signOut();
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-50 text-red-600 text-sm font-bold transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>تسجيل الخروج</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {profileOpen && (
-                  <button
-                    className="fixed inset-0 z-[-1]"
-                    onClick={() => setProfileOpen(false)}
-                    aria-label="إغلاق القائمة"
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/auth"
-                  className="text-zinc-700 hover:text-zinc-900 font-bold px-4 py-2 rounded-full hover:bg-zinc-100 transition-colors"
-                >
-                  دخول
-                </Link>
-                <Link
-                  href="/auth"
-                  className="bg-zinc-900 hover:bg-zinc-800 text-white font-bold px-4 py-2 rounded-full transition-colors"
-                >
-                  حساب جديد
-                </Link>
-              </div>
-            )}
-
-            {(!user || user.userType === 'seller') && (
-              <Link
-                href="/sell"
-                className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2 rounded-full font-bold transition-colors"
-              >
-                <Store className="w-4 h-4" />
-                <span>بيع</span>
-              </Link>
-            )}
-
-            <Link
-              href="/profile"
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
-            >
-              <ShoppingBag className="w-5 h-5" />
-            </Link>
+        <form onSubmit={onSearch} className="mx-auto hidden w-full max-w-xl sm:block" role="search">
+          <div className="relative">
+            <Search className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="ابحث عن منتج أو فئة..."
+              className="field h-11 bg-slate-50 pr-11 pl-24"
+              aria-label="البحث في المنتجات"
+            />
+            <button type="submit" className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-extrabold text-white hover:bg-emerald-800">
+              بحث
+            </button>
           </div>
+        </form>
 
-          <button
-            className="md:hidden p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
-            onClick={() => setOpen(!open)}
-            aria-label="القائمة"
-          >
-            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+        <div className="mr-auto hidden shrink-0 items-center gap-2 md:flex">
+          {!loading && user ? (
+            <div className="relative" ref={profileRef}>
+              <button
+                type="button"
+                onClick={() => setProfileOpen((value) => !value)}
+                className="btn-secondary h-11 max-w-48 px-3"
+                aria-expanded={profileOpen}
+                aria-haspopup="menu"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                  <User className="h-4 w-4" />
+                </span>
+                <span className="truncate">{user.displayName || 'حسابي'}</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {profileOpen && (
+                <div className="absolute left-0 top-full mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl" role="menu">
+                  <div className="mb-2 rounded-xl bg-slate-50 p-3">
+                    <p className="truncate font-extrabold text-slate-900">{user.displayName || 'مستخدم'}</p>
+                    <p className="truncate text-xs text-slate-500">{user.email}</p>
+                    <span className="mt-2 inline-flex rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">
+                      {user.userType === 'seller' ? 'حساب بائع' : 'حساب مشتري'}
+                    </span>
+                  </div>
+                  <Link href="/profile" className="btn-ghost w-full justify-start text-sm" role="menuitem">
+                    <Package className="h-4 w-4" />
+                    لوحة الحساب
+                  </Link>
+                  {user.userType === 'seller' && (
+                    <Link href="/sell" className="btn-ghost w-full justify-start text-sm" role="menuitem">
+                      <Store className="h-4 w-4" />
+                      إضافة منتج
+                    </Link>
+                  )}
+                  <button type="button" onClick={handleSignOut} className="flex min-h-11 w-full items-center gap-2 rounded-xl px-4 text-sm font-extrabold text-red-700 hover:bg-red-50" role="menuitem">
+                    <LogOut className="h-4 w-4" />
+                    تسجيل الخروج
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : !loading ? (
+            <Link href={authHref} className="btn-secondary h-11">
+              <User className="h-4 w-4" />
+              دخول
+            </Link>
+          ) : (
+            <span className="h-11 w-24 animate-pulse rounded-xl bg-slate-100" />
+          )}
+
+          {user?.userType === 'seller' ? (
+            <Link href="/sell" className="btn-primary h-11">
+              <Store className="h-4 w-4" />
+              أضف إعلاناً
+            </Link>
+          ) : !user && !loading ? (
+            <Link href="/auth?mode=signup&type=seller" className="btn-primary h-11">
+              ابدأ البيع
+            </Link>
+          ) : null}
         </div>
+
+        <button
+          type="button"
+          className="mr-auto flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 md:hidden"
+          onClick={() => setMenuOpen(true)}
+          aria-label="فتح القائمة"
+          aria-expanded={menuOpen}
+        >
+          <Menu className="h-6 w-6" />
+        </button>
       </div>
 
-      <nav className="hidden md:block bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-6 h-11 overflow-x-auto text-sm font-bold no-scrollbar">
-            <Link href="/" className={`flex items-center gap-1 ${isActive('/') ? 'text-zinc-900' : 'text-zinc-500 hover:text-zinc-900'}`}>
-              <Home className="w-3.5 h-3.5" />
-              الرئيسية
-            </Link>
-            <Link href="/search" className={`flex items-center gap-1 ${isActive('/search') ? 'text-zinc-900' : 'text-zinc-500 hover:text-zinc-900'}`}>
-              <Grid3X3 className="w-3.5 h-3.5" />
-              كل الفئات
-            </Link>
-            {categories.map((c) => {
-              const href = `/categories/${encodeURIComponent(c.slug)}`;
-              return (
-                <Link
-                  key={c.slug}
-                  href={href}
-                  className={`whitespace-nowrap ${isActive(href) ? 'text-zinc-900' : 'text-zinc-500 hover:text-zinc-900'}`}
-                >
-                  {c.label}
-                </Link>
-              );
-            })}
-          </div>
+      <nav className="hidden border-t border-slate-100 bg-white md:block" aria-label="التصفح الرئيسي">
+        <div className="no-scrollbar mx-auto flex h-11 max-w-7xl items-center gap-1 overflow-x-auto px-4 sm:px-6 lg:px-8">
+          <NavLink href="/" active={pathname === '/'}><Home className="h-4 w-4" />الرئيسية</NavLink>
+          <NavLink href="/search" active={pathname === '/search'}><Grid3X3 className="h-4 w-4" />كل المنتجات</NavLink>
+          {categories.map((category) => {
+            const href = `/categories/${encodeURIComponent(category)}`;
+            return <NavLink key={category} href={href} active={pathname === href}>{category}</NavLink>;
+          })}
         </div>
       </nav>
 
-      {open && (
-        <div className="md:hidden fixed inset-0 z-50 bg-zinc-900/30" onClick={() => setOpen(false)}>
-          <div
-            className="absolute top-0 right-0 w-80 max-w-full h-full bg-white border-l border-zinc-200 p-5 flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-            dir="rtl"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <Link href="/" className="flex-shrink-0" onClick={() => setOpen(false)}>
-                {Logo}
-              </Link>
-              <button onClick={() => setOpen(false)} className="p-2 rounded-full bg-zinc-100 text-zinc-700">
-                <X className="w-5 h-5" />
+      {menuOpen && (
+        <div className="fixed inset-0 z-[70] bg-slate-950/40 md:hidden" onClick={() => setMenuOpen(false)}>
+          <div className="absolute inset-y-0 right-0 flex w-[min(90vw,23rem)] flex-col overflow-y-auto bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-5 flex items-center justify-between">
+              <Brand />
+              <button type="button" onClick={() => setMenuOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100" aria-label="إغلاق القائمة">
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={onSearch} className="flex items-center rounded-full bg-zinc-100 border border-zinc-200 overflow-hidden mb-6" dir="ltr">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="ابحث..."
-                className="flex-1 px-4 py-2.5 bg-transparent outline-none text-zinc-900"
-                dir="rtl"
-              />
-              <button type="submit" className="flex items-center justify-center w-9 h-9 m-1 bg-zinc-900 text-white rounded-full" aria-label="بحث">
-                <Search className="w-4 h-4" />
-              </button>
+            <form onSubmit={onSearch} className="mb-5" role="search">
+              <div className="relative">
+                <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} className="field pr-11" placeholder="ابحث في السوق..." aria-label="البحث في المنتجات" />
+              </div>
             </form>
 
-            <div className="grid grid-cols-2 gap-2 mb-6">
-              {categories.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/categories/${encodeURIComponent(c.slug)}`}
-                  className="flex items-center justify-center px-3 py-2 rounded-xl bg-white border border-zinc-200 text-zinc-700 text-sm font-bold hover:bg-zinc-100 transition-colors"
-                  onClick={() => setOpen(false)}
-                >
-                  {c.label}
-                </Link>
-              ))}
-              <Link
-                href="/search"
-                className="flex items-center justify-center px-3 py-2 rounded-xl bg-white border border-zinc-200 text-zinc-700 text-sm font-bold hover:bg-zinc-100 transition-colors"
-                onClick={() => setOpen(false)}
-              >
-                كل الفئات
-              </Link>
+            {user && (
+              <div className="mb-4 rounded-2xl bg-emerald-50 p-4">
+                <p className="font-black text-slate-900">{user.displayName || 'مستخدم'}</p>
+                <p className="mt-1 truncate text-xs text-slate-600">{user.email}</p>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <MobileLink href="/" icon={<Home className="h-5 w-5" />}>الرئيسية</MobileLink>
+              <MobileLink href="/search" icon={<Grid3X3 className="h-5 w-5" />}>استعراض المنتجات</MobileLink>
+              <MobileLink href="/profile" icon={<Package className="h-5 w-5" />}>{user ? 'لوحة الحساب' : 'حسابي'}</MobileLink>
+              {user?.userType === 'seller' && <MobileLink href="/sell" icon={<Store className="h-5 w-5" />} primary>إضافة منتج للبيع</MobileLink>}
             </div>
 
-            <div className="space-y-2 mb-6">
-              <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-zinc-200 text-zinc-700 font-bold hover:bg-zinc-100 transition-colors">
-                <Home className="w-5 h-5" />
-                الرئيسية
-              </Link>
-              <Link href="/search" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-zinc-200 text-zinc-700 font-bold hover:bg-zinc-100 transition-colors">
-                <Grid3X3 className="w-5 h-5" />
-                استعرض المنتجات
-              </Link>
-              {user?.userType === 'seller' && (
-                <Link href="/sell" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-zinc-900 text-white font-bold hover:bg-zinc-800 transition-colors">
-                  <Store className="w-5 h-5" />
-                  أضف منتج للبيع
-                </Link>
-              )}
-              <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-zinc-200 text-zinc-700 font-bold hover:bg-zinc-100 transition-colors">
-                <Package className="w-5 h-5" />
-                {user ? 'ملفي الشخصي' : 'حسابي'}
-              </Link>
+            <div className="mt-5 border-t border-slate-100 pt-5">
+              <p className="mb-3 text-xs font-extrabold text-slate-500">الفئات</p>
+              <div className="grid grid-cols-2 gap-2">
+                {categories.map((category) => (
+                  <Link key={category} href={`/categories/${encodeURIComponent(category)}`} className="rounded-xl border border-slate-200 px-3 py-2.5 text-center text-sm font-bold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50">
+                    {category}
+                  </Link>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-auto pt-4 border-t border-zinc-100">
+            <div className="mt-auto pt-6">
               {user ? (
-                <button
-                  onClick={() => {
-                    signOut();
-                    setOpen(false);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
-                >
-                  <LogOut className="w-5 h-5" />
+                <button type="button" onClick={handleSignOut} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-50 font-extrabold text-red-700">
+                  <LogOut className="h-5 w-5" />
                   تسجيل الخروج
                 </button>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  <Link href="/auth" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-zinc-100 text-zinc-700 font-bold hover:bg-zinc-200 transition-colors">
-                    دخول
-                  </Link>
-                  <Link href="/auth" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-zinc-900 text-white font-bold hover:bg-zinc-800 transition-colors">
-                    حساب جديد
-                  </Link>
+                  <Link href={authHref} className="btn-secondary">دخول</Link>
+                  <Link href="/auth?mode=signup" className="btn-primary">حساب جديد</Link>
                 </div>
               )}
             </div>
@@ -315,5 +237,27 @@ export default function Header() {
         </div>
       )}
     </header>
+  );
+}
+
+function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-bold transition-colors ${
+        active ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MobileLink({ href, icon, primary = false, children }: { href: string; icon: React.ReactNode; primary?: boolean; children: React.ReactNode }) {
+  return (
+    <Link href={href} className={`flex min-h-12 items-center gap-3 rounded-xl px-4 font-extrabold ${primary ? 'bg-emerald-700 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
+      {icon}
+      {children}
+    </Link>
   );
 }

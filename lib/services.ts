@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
@@ -25,6 +26,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { auth, db } from './firebase';
 import { isDemoMode } from './config';
 import type { Product, Order, UserProfile, ProductStatus, Review, UserType } from '@/types';
@@ -32,6 +34,7 @@ import type { Product, Order, UserProfile, ProductStatus, Review, UserType } fro
 const PRODUCTS_KEY = 'algshop_products_v2';
 const ORDERS_KEY = 'algshop_orders_v2';
 const USER_KEY = 'algshop_user_v2';
+const USERS_KEY = 'algshop_users_v1';
 const REVIEWS_KEY = 'algshop_reviews_v1';
 
 // --- helpers ---
@@ -266,20 +269,58 @@ function setDemoCurrentUser(user: UserProfile | null) {
   window.dispatchEvent(new Event('algshop-auth'));
 }
 
+function getDemoUsers(): UserProfile[] {
+  return getDemoData<UserProfile>(USERS_KEY);
+}
+
+function saveDemoUser(user: UserProfile) {
+  const users = getDemoUsers().filter((item) => item.uid !== user.uid && item.email !== user.email);
+  users.push(user);
+  setDemoData(USERS_KEY, users);
+}
+
+function authErrorMessage(error: unknown): string {
+  if (!(error instanceof FirebaseError)) {
+    return error instanceof Error ? error.message : 'تعذر إكمال العملية. حاول مرة أخرى.';
+  }
+
+  const messages: Record<string, string> = {
+    'auth/email-already-in-use': 'هذا البريد مستخدم بالفعل. جرّب تسجيل الدخول.',
+    'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+    'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    'auth/user-disabled': 'تم تعطيل هذا الحساب. تواصل مع الدعم.',
+    'auth/weak-password': 'كلمة المرور ضعيفة. استخدم 8 أحرف على الأقل.',
+    'auth/popup-closed-by-user': 'تم إغلاق نافذة Google قبل إكمال الدخول.',
+    'auth/popup-blocked': 'المتصفح منع نافذة Google. اسمح بالنوافذ المنبثقة وحاول مجدداً.',
+    'auth/network-request-failed': 'تعذر الاتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.',
+    'auth/too-many-requests': 'محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم حاول.',
+    'firestore/permission-denied': 'لا تملك صلاحية إكمال هذه العملية.',
+  };
+
+  return messages[error.code] || 'تعذر تسجيل الدخول حالياً. حاول مرة أخرى.';
+}
+
 // --- auth ---
 
 export function onAuthStateChange(callback: (user: UserProfile | null) => void) {
   if (isDemoMode) {
     const handler = () => callback(getDemoCurrentUser());
     window.addEventListener('algshop-auth', handler);
+    callback(getDemoCurrentUser());
     return () => window.removeEventListener('algshop-auth', handler);
   }
   if (!auth) {
     callback(null);
     return () => {};
   }
-  return onAuthStateChanged(auth, async (user) => {
-    callback(user ? await getUserProfile(user.uid) : null);
+  return onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      callback(null);
+      return;
+    }
+    void getUserProfile(user.uid)
+      .then(callback)
+      .catch(() => callback(null));
   });
 }
 
@@ -305,46 +346,80 @@ export async function signUp(
   phone: string,
   userType: UserType = 'buyer'
 ): Promise<UserProfile> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedName = displayName.trim();
+  const normalizedPhone = phone.trim();
+
   if (isDemoMode) {
+    if (getDemoUsers().some((item) => item.email?.toLowerCase() === normalizedEmail)) {
+      throw new Error('هذا البريد مستخدم بالفعل. جرّب تسجيل الدخول.');
+    }
     const user: UserProfile = {
       uid: `demo-${Date.now()}`,
-      displayName,
-      email,
-      phone,
+      displayName: normalizedName,
+      email: normalizedEmail,
+      phone: normalizedPhone,
       photoURL: null,
       userType,
       createdAt: new Date().toISOString(),
     };
+    saveDemoUser(user);
     setDemoCurrentUser(user);
     return user;
   }
-  if (!auth || !db) throw new Error('Firebase not configured');
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  await updateProfile(cred.user, { displayName });
-  const profile: UserProfile = {
-    uid: cred.user.uid,
-    displayName,
-    email,
-    phone,
-    photoURL: null,
-    userType,
-    createdAt: new Date().toISOString(),
-  };
-  await setDoc(doc(db, 'users', cred.user.uid), cleanUndefined(profile as unknown as Record<string, unknown>), { merge: true });
-  return profile;
+  if (!auth || !db) throw new Error('خدمة الحسابات غير مهيأة.');
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+    const profile: UserProfile = {
+      uid: cred.user.uid,
+      displayName: normalizedName,
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      photoURL: null,
+      userType,
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await updateProfile(cred.user, { displayName: normalizedName });
+      await setDoc(doc(db, 'users', cred.user.uid), cleanUndefined(profile as unknown as Record<string, unknown>), { merge: true });
+      return profile;
+    } catch (error) {
+      await deleteUser(cred.user).catch(() => undefined);
+      throw error;
+    }
+  } catch (error) {
+    throw new Error(authErrorMessage(error));
+  }
 }
 
 export async function signIn(email: string, password: string): Promise<UserProfile> {
+  const normalizedEmail = email.trim().toLowerCase();
   if (isDemoMode) {
-    const user = getDemoCurrentUser();
-    if (!user) throw new Error('لا يوجد حساب تجريبي');
+    const user = getDemoUsers().find((item) => item.email?.toLowerCase() === normalizedEmail);
+    if (!user) throw new Error('لا يوجد حساب بهذا البريد. أنشئ حساباً جديداً أولاً.');
+    setDemoCurrentUser(user);
     return user;
   }
-  if (!auth) throw new Error('Firebase not configured');
-  const cred = await signInWithEmailAndPassword(auth, email, password);
-  const profile = await getUserProfile(cred.user.uid);
-  if (!profile) throw new Error('لم يتم العثور على الملف الشخصي');
-  return profile;
+  if (!auth || !db) throw new Error('خدمة الحسابات غير مهيأة.');
+  try {
+    const cred = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    const existing = await getUserProfile(cred.user.uid);
+    if (existing) return existing;
+
+    const profile: UserProfile = {
+      uid: cred.user.uid,
+      displayName: cred.user.displayName || normalizedEmail.split('@')[0],
+      email: cred.user.email,
+      phone: cred.user.phoneNumber,
+      photoURL: cred.user.photoURL,
+      userType: 'buyer',
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'users', cred.user.uid), cleanUndefined(profile as unknown as Record<string, unknown>), { merge: true });
+    return profile;
+  } catch (error) {
+    throw new Error(authErrorMessage(error));
+  }
 }
 
 export async function signInWithGoogle(
@@ -352,34 +427,41 @@ export async function signInWithGoogle(
   phone?: string
 ): Promise<UserProfile> {
   if (isDemoMode) {
+    const existing = getDemoUsers().find((item) => item.email === 'demo-google@example.com');
     const user: UserProfile = {
-      uid: `demo-google-${Date.now()}`,
+      uid: existing?.uid || `demo-google-${Date.now()}`,
       displayName: 'مستخدم Google',
       email: 'demo-google@example.com',
-      phone: phone || null,
+      phone: phone?.trim() || existing?.phone || null,
       photoURL: null,
-      userType: userType || 'buyer',
-      createdAt: new Date().toISOString(),
+      userType: userType || existing?.userType || 'buyer',
+      createdAt: existing?.createdAt || new Date().toISOString(),
     };
+    saveDemoUser(user);
     setDemoCurrentUser(user);
     return user;
   }
-  if (!auth || !db) throw new Error('Firebase not configured');
-  const provider = new GoogleAuthProvider();
-  const cred = await signInWithPopup(auth, provider);
-  const existing = await getUserProfile(cred.user.uid);
-  if (existing) return existing;
-  const profile: UserProfile = {
-    uid: cred.user.uid,
-    displayName: cred.user.displayName || 'مستخدم Google',
-    email: cred.user.email,
-    phone: phone || cred.user.phoneNumber,
-    photoURL: cred.user.photoURL,
-    userType: userType || 'buyer',
-    createdAt: new Date().toISOString(),
-  };
-  await setDoc(doc(db, 'users', cred.user.uid), cleanUndefined(profile as unknown as Record<string, unknown>), { merge: true });
-  return profile;
+  if (!auth || !db) throw new Error('خدمة الحسابات غير مهيأة.');
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const cred = await signInWithPopup(auth, provider);
+    const existing = await getUserProfile(cred.user.uid);
+    if (existing) return existing;
+    const profile: UserProfile = {
+      uid: cred.user.uid,
+      displayName: cred.user.displayName || 'مستخدم Google',
+      email: cred.user.email,
+      phone: phone?.trim() || cred.user.phoneNumber,
+      photoURL: cred.user.photoURL,
+      userType: userType || 'buyer',
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'users', cred.user.uid), cleanUndefined(profile as unknown as Record<string, unknown>), { merge: true });
+    return profile;
+  } catch (error) {
+    throw new Error(authErrorMessage(error));
+  }
 }
 
 export async function signOut() {
@@ -396,6 +478,7 @@ export async function updateUserProfile(data: Partial<UserProfile>) {
     const user = getDemoCurrentUser();
     if (!user) throw new Error('غير مسجل الدخول');
     const updated = { ...user, ...data };
+    saveDemoUser(updated);
     setDemoCurrentUser(updated);
     return updated;
   }
@@ -427,8 +510,10 @@ export async function getSellerReviews(sellerId: string): Promise<Review[]> {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
   if (!db) return [];
-  const snap = await getDocs(query(collection(db, 'reviews'), where('sellerId', '==', sellerId), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => normalizeReview(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(query(collection(db, 'reviews'), where('sellerId', '==', sellerId)));
+  return snap.docs
+    .map((d) => normalizeReview(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export async function getSellerRating(sellerId: string): Promise<{ rating: number; count: number }> {
@@ -666,6 +751,13 @@ export async function updateOrderStatus(id: string, status: Order['status']) {
 
 export async function uploadImages(files: File[]): Promise<string[]> {
   if (!files.length) return [];
+  if (files.length > 6) throw new Error('يمكن رفع 6 صور كحد أقصى.');
+  if (files.some((file) => !file.type.startsWith('image/'))) {
+    throw new Error('يمكن رفع ملفات الصور فقط.');
+  }
+  if (files.some((file) => file.size > 5 * 1024 * 1024)) {
+    throw new Error('حجم كل صورة يجب ألا يتجاوز 5 ميغابايت.');
+  }
   if (isDemoMode) {
     const urls: string[] = [];
     for (const file of files) {
@@ -688,8 +780,8 @@ export async function uploadImages(files: File[]): Promise<string[]> {
       body: data,
     });
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(body || 'فشل في الحصول على رابط الرفع');
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(body?.error || 'تعذر رفع الصورة. حاول مرة أخرى.');
     }
     const { publicUrl } = (await res.json()) as { publicUrl: string };
     urls.push(publicUrl);
